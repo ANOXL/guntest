@@ -45,18 +45,16 @@
       border: 1px solid #61dafb;
     }
 
-    /* --- ZAKTUALIZOWANA STRUKTURA PISTOLETU --- */
     #gun {
       position: absolute;
       width: 290px; 
-      height: 150px; /* ZMIANA: Zmniejszona wysokość po usunięciu ramy */
+      height: 170px;
       left: calc(50% + 250px);
       top: 50%;
       transform: translate(-50%, -50%);
       z-index: 10;
     }
 
-    /* --- ZAMEK (SLIDE) --- */
     #gun-slide {
       position: absolute;
       width: 290px;
@@ -89,49 +87,46 @@
     #gun-slide::before { right: 25px; }
     #gun-slide::after { left: 20px; }
 
-    #rear-sight, #front-sight {
-        position: absolute;
-        background: #222;
-        top: -6px;
-        z-index: 13;
-        box-shadow: 1px -1px 2px rgba(0,0,0,0.3);
-    }
+    #rear-sight, #front-sight { position: absolute; background: #222; top: -6px; z-index: 13; box-shadow: 1px -1px 2px rgba(0,0,0,0.3); }
     #rear-sight { left: 25px; width: 18px; height: 6px; border-radius: 2px; }
     #front-sight { right: 20px; width: 6px; height: 6px; border-radius: 1px; }
 
-    #ejection-port {
-        position: absolute;
-        width: 50px;
-        height: 24px;
-        background: #282c34;
-        top: 8px;
-        right: 85px;
-        border-radius: 2px;
-        box-shadow: inset 1px 1px 4px rgba(0,0,0,0.8);
-    }
+    #ejection-port { position: absolute; width: 50px; height: 24px; background: #282c34; top: 8px; right: 85px; border-radius: 2px; box-shadow: inset 1px 1px 4px rgba(0,0,0,0.8); }
     #ejection-port::before { content: ''; position: absolute; width: 15px; height: 6px; background: #3e444c; top: 9px; left: 20px; border-radius: 1px; }
 
     #gun-slide .slide-text { position: absolute; font-family: 'Arial Black', sans-serif; font-size: 16px; color: #ddd; text-shadow: 1px 1px 1px #000; top: 10px; }
     #slide-logo { left: 90px; font-size: 20px; font-weight: bold; }
     #slide-model { left: 110px; }
+    
+    #gun-frame {
+        position: absolute;
+        width: 290px;
+        height: 20px;
+        background: #3a3e45;
+        top: 40px;
+        left: 0;
+        z-index: 9;
+        cursor: grab;
+        border-radius: 0 0 5px 5px;
+        box-shadow: inset 0 -2px 3px rgba(0,0,0,0.4);
+    }
 
-    /* ZMIANA: Usunięto #gun-lower-frame, zmieniono pozycję chwytu i spustu */
-
+    /* ZMIANA: Chwyt poszerzony i repozycjonowany */
     #gun-grip {
         position: absolute;
-        width: 55px;
+        width: 65px; /* NOWA SZEROKOŚĆ */
         height: 110px;
         background-color: #333;
         background-image:
             radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1px, transparent 0);
         background-size: 4px 4px;
-        top: 35px; /* NOWA POZYCJA: Wyżej, pod zamkiem */
-        left: 45px; /* NOWA POZYCJA: Bardziej w lewo */
+        top: 55px;
+        left: 25px; /* NOWA POZYCJA */
         border-radius: 8px 8px 12px 12px;
         border: 1px solid #222;
         z-index: 8;
         cursor: grab;
-        transform: skewX(-8deg); /* Dodaje lekki skos dla lepszego wyglądu */
+        transform: skewX(-8deg);
     }
     
     #gun-trigger-guard {
@@ -141,8 +136,8 @@
         border: 8px solid #3a3e45;
         border-top: none;
         border-radius: 0 0 25px 25px;
-        top: 38px; /* NOWA POZYCJA: Dopasowana do chwytu */
-        left: 105px; /* NOWA POZYCJA: Dopasowana do chwytu */
+        top: 58px;
+        left: 95px; /* NOWA POZYCJA */
         z-index: 11;
     }
 
@@ -153,7 +148,7 @@
         background: #222;
         border: 1px solid #444;
         top: -5px;
-        left: 23px; /* Dopasowana pozycja wewnątrz osłony */
+        left: 23px;
         border-radius: 2px 2px 8px 8px;
         cursor: pointer;
         transition: transform 0.05s ease-out, background-color 0.05s;
@@ -164,66 +159,17 @@
         background: #111;
     }
 
-    /* --- POZOSTAŁE STYLE BEZ ZMIAN --- */
-    #magazine {
-      position: absolute;
-      width: 35px;
-      height: 120px; 
-      background: #3a3a3a;
-      border: 3px solid #222;
-      border-radius: 4px;
-      cursor: grab;
-      z-index: 15;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 2px 2px 6px rgba(0,0,0,0.5);
-    }
-
-    .ammo {
-      position: absolute;
-      width: 12px;
-      height: 20px;
-      background: #d4af37;
-      border: 1px solid #8b6e2f;
-      border-radius: 3px;
-      cursor: grab;
-      z-index: 20;
-      transition: outline 0.1s;
-    }
-    .ammo.selected {
-      outline: 2px solid #61dafb;
-      box-shadow: 0 0 10px #61dafb;
-    }
-
-    .bullet {
-      position: absolute;
-      width: 10px;
-      height: 10px;
-      background: #ff8c00;
-      border-radius: 50%;
-      box-shadow: 0 0 8px 3px #ff8c00;
-      z-index: 100;
-    }
-
-    #overlay {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(20, 20, 20, 0.95);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 25px; z-index: 2000; font-family: 'Arial Black', Gadget, sans-serif;
-    }
+    /* Reszta stylów bez zmian */
+    #magazine { position: absolute; width: 35px; height: 120px; background: #3a3a3a; border: 3px solid #222; border-radius: 4px; cursor: grab; z-index: 15; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 2px 2px 6px rgba(0,0,0,0.5); }
+    .ammo { position: absolute; width: 12px; height: 20px; background: #d4af37; border: 1px solid #8b6e2f; border-radius: 3px; cursor: grab; z-index: 20; transition: outline 0.1s; }
+    .ammo.selected { outline: 2px solid #61dafb; box-shadow: 0 0 10px #61dafb; }
+    .bullet { position: absolute; width: 10px; height: 10px; background: #ff8c00; border-radius: 50%; box-shadow: 0 0 8px 3px #ff8c00; z-index: 100; }
+    #overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(20, 20, 20, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 25px; z-index: 2000; font-family: 'Arial Black', Gadget, sans-serif; }
     #overlay div:first-child { font-size: 48px; font-weight: bold; color: #61dafb; text-shadow: 0 0 10px #61dafb, 0 0 20px #61dafb; }
     .button { padding: 15px 30px; background: #2196f3; border: none; border-radius: 8px; color: white; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: background-color 0.3s, transform 0.2s; }
     .button:hover { background-color: #0b7dda; transform: translateY(-2px); }
-
     #ammo-loaded-indicator { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); font-size: 14px; color: #ffeb3b; background: rgba(0,0,0,0.5); padding: 2px 5px; border-radius: 3px; }
-    
-    #notification {
-        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-        background-color: rgba(30,30,30,0.9); color: white; padding: 12px 25px; border-radius: 8px;
-        border: 1px solid #61dafb; z-index: 3000; opacity: 0; pointer-events: none;
-        transition: opacity 0.3s ease-in-out; font-size: 16px;
-    }
+    #notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background-color: rgba(30,30,30,0.9); color: white; padding: 12px 25px; border-radius: 8px; border: 1px solid #61dafb; z-index: 3000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease-in-out; font-size: 16px; }
   </style>
 </head>
 <body>
@@ -245,7 +191,7 @@
         <div class="slide-text" id="slide-logo">G</div>
         <div class="slide-text" id="slide-model">19</div>
     </div> 
-    <!-- ZMIANA: Chwyt i osłona spustu są teraz dziećmi #gun -->
+    <div id="gun-frame"></div>
     <div id="gun-grip"></div>
     <div id="gun-trigger-guard">
         <div id="gun-trigger"></div>
@@ -257,6 +203,7 @@
 </div>
 
 <script>
+  // Cały kod JavaScript pozostaje bez zmian
   // --- Game State ---
   let magInserted = false;
   let magazineLoaded = false;
@@ -276,7 +223,7 @@
   const ammoLoadedIndicator = document.getElementById('ammo-loaded-indicator');
   const gunGrip = document.getElementById('gun-grip');
   const gunTrigger = document.getElementById('gun-trigger');
-  // ZMIANA: usunięto gunLowerFrame
+  const gunFrame = document.getElementById('gun-frame');
   
   // --- Scene & Camera Controls ---
   let sceneTranslateX = 0, sceneTranslateY = 0, sceneScale = 1;
@@ -489,8 +436,8 @@
           selectedAmmo._dragStartY = selectedAmmo.offsetTop;
         });
       }
-    } else if (e.target === scene || e.target === gunGrip) { // ZMIANA: usunięto #gun-lower-frame z warunku
-      if (magInserted && e.target === gunGrip) return; // Nie przesuwaj sceny, jeśli kliknięcie ma wyrzucić magazynek
+    } else if (e.target === scene || e.target === gunGrip || e.target === gunFrame) {
+      if (magInserted && e.target === gunGrip) return;
       clearSelection();
       isPanning = true;
       scene.style.cursor = 'grabbing';
