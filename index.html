@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gun Game - Realistyczna Scena</title>
+  <style>
+    html, body {
+      margin: 0;
+      overflow: hidden;
+      height: 100%;
+      user-select: none;
+      background-color: #282c34;
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    #scene {
+      position: absolute;
+      width: 2000px;
+      height: 2000px;
+      background-color: #343a40;
+      background-image:
+        linear-gradient(#4a4e57 1px, transparent 1px),
+        linear-gradient(90deg, #4a4e57 1px, transparent 1px);
+      background-size: 100px 100px;
+      cursor: grab;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s ease-out;
+    }
+
+    #coords {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.7);
+      color: #61dafb;
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      pointer-events: none;
+      z-index: 1000;
+      border: 1px solid #61dafb;
+    }
+
+    #gun {
+      position: absolute;
+      width: 160px;
+      height: 60px;
+      background: #404040;
+      border-radius: 8px 8px 4px 4px;
+      box-shadow: 2px 3px 8px rgba(0,0,0,0.6);
+      z-index: 10;
+      left: calc(50% + 250px);
+      top: 50%;
+      transform: translateX(-50%);
+      border: 2px solid #333;
+    }
+
+    #gun-top {
+      position: absolute;
+      width: 120px;
+      height: 25px;
+      background: #303030;
+      border-radius: 4px;
+      left: 30px;
+      top: -2px;
+      border: 1px solid #222;
+      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.4);
+      cursor: grab;
+      transition: left 0.15s ease-in-out;
+    }
+
+    #magazine {
+      position: absolute;
+      width: 35px;
+      height: 80px;
+      background: #555;
+      border: 3px solid #333;
+      border-radius: 4px;
+      cursor: grab;
+      z-index: 15;
+      left: 50%;
+      top: 50%;
+      transform: translateX(-50%);
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.5);
+    }
+
+    .ammo {
+      position: absolute;
+      width: 12px;
+      height: 20px;
+      background: #d4af37;
+      border: 1px solid #8b6e2f;
+      border-radius: 3px;
+      cursor: grab;
+      z-index: 20;
+      transition: outline 0.1s;
+    }
+    .ammo.selected {
+      outline: 2px solid #61dafb;
+      box-shadow: 0 0 10px #61dafb;
+    }
+
+    .bullet {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #ff8c00;
+      border-radius: 50%;
+      box-shadow: 0 0 8px 3px #ff8c00;
+      z-index: 100;
+    }
+
+    #overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(20, 20, 20, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 25px;
+      z-index: 2000;
+      font-family: 'Arial Black', Gadget, sans-serif;
+    }
+    
+    #overlay div:first-child {
+      font-size: 48px;
+      font-weight: bold;
+      color: #61dafb;
+      text-shadow: 0 0 10px #61dafb, 0 0 20px #61dafb;
+    }
+
+    .button {
+      padding: 15px 30px;
+      background: #2196f3;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .button:hover {
+      background-color: #0b7dda;
+      transform: translateY(-2px);
+    }
+
+    #ammo-loaded-indicator {
+        position: absolute;
+        bottom: 5px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 14px;
+        color: #ffeb3b;
+        background: rgba(0,0,0,0.5);
+        padding: 2px 5px;
+        border-radius: 3px;
+    }
+    
+    #notification {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(30,30,30,0.9);
+        color: white;
+        padding: 12px 25px;
+        border-radius: 8px;
+        border: 1px solid #61dafb;
+        z-index: 3000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease-in-out;
+        font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="coords">X: 0, Y: 0</div>
+<div id="notification"></div>
+
+<div id="overlay">
+  <div>GLOCK 19</div>
+  <button class="button" id="playBtn">START GAME</button>
+</div>
+
+<div id="scene">
+  <div id="gun">
+    <div id="gun-top"></div>
+  </div>
+  <div id="magazine" title="Load ammo, then drag here">
+    <div id="ammo-loaded-indicator">0 / 15</div>
+  </div>
+</div>
+
+<script>
+  // --- Game State ---
+  let magInserted = false;
+  let magazineLoaded = false;
+  let ammoCount = 0;
+  let loadedAmmoCount = 0;
+  const maxAmmo = 15;
+
+  // --- DOM Elements ---
+  const scene = document.getElementById('scene');
+  const coordsDisplay = document.getElementById('coords');
+  const gun = document.getElementById('gun');
+  const gunTop = document.getElementById('gun-top');
+  const mag = document.getElementById('magazine');
+  const overlay = document.getElementById('overlay');
+  const playBtn = document.getElementById('playBtn');
+  const notification = document.getElementById('notification');
+  const ammoLoadedIndicator = document.getElementById('ammo-loaded-indicator');
+  
+  // --- Scene & Movement ---
+  let sceneTranslateX = 0, sceneTranslateY = 0;
+  window.addEventListener('keydown', (e) => {
+    const moveSpeed = 20;
+    if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        document.querySelectorAll('.ammo:not(.selected)').forEach(ammo => ammo.classList.add('selected'));
+        return;
+    }
+    if (['w', 's', 'a', 'd'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        switch (e.key.toLowerCase()) {
+            case 'w': sceneTranslateY += moveSpeed; break;
+            case 's': sceneTranslateY -= moveSpeed; break;
+            case 'a': sceneTranslateX += moveSpeed; break;
+            case 'd': sceneTranslateX -= moveSpeed; break;
+        }
+        scene.style.transform = `translate(calc(-50% + ${sceneTranslateX}px), calc(-50% + ${sceneTranslateY}px))`;
+        coordsDisplay.textContent = `X: ${-sceneTranslateX}, Y: ${-sceneTranslateY}`;
+    }
+    if (e.key === 'Escape') {
+      location.reload();
+    }
+  });
+
+  // --- Gun Slide Interaction (Chambering) ---
+  let isDraggingGunTop = false;
+  let startGunTopX = 0;
+  let shellEjected = false;
+  const loadSound = new Audio('https://actions.google.com/sounds/v1/weapons/gun_cocking.ogg');
+  loadSound.volume = 0.5;
+
+  function playSound(sound) {
+    sound.currentTime = 0;
+    sound.play();
+  }
+
+  gunTop.addEventListener('mousedown', (e) => {
+    if (!magInserted || magazineLoaded) return;
+    e.preventDefault();
+    isDraggingGunTop = true;
+    startGunTopX = e.clientX;
+    gunTop.style.cursor = 'grabbing';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (isDraggingGunTop) {
+      let dx = e.clientX - startGunTopX;
+      let newLeft = parseFloat(gunTop.style.left) + dx;
+      const minLeft = 30, maxLeft = -30;
+      newLeft = Math.max(maxLeft, Math.min(newLeft, minLeft));
+      gunTop.style.left = newLeft + 'px';
+      if (newLeft < -20 && !shellEjected) {
+        shellEjected = true;
+        playSound(loadSound);
+      }
+      startGunTopX = e.clientX;
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDraggingGunTop) {
+      isDraggingGunTop = false;
+      gunTop.style.cursor = 'grab';
+      if (shellEjected) {
+        magazineLoaded = true;
+        ammoCount = loadedAmmoCount;
+        showNotification(`Weapon loaded with ${ammoCount} rounds.`);
+      }
+      gunTop.style.transition = 'left 0.1s ease-out';
+      gunTop.style.left = '30px';
+      setTimeout(() => gunTop.style.transition = 'left 0.15s ease-in-out', 100);
+    }
+  });
+
+  // --- Magazine Insertion Check ---
+  function checkMagInserted() {
+    if (loadedAmmoCount === 0 || isDraggingMag === false) return false;
+    const gunRect = gun.getBoundingClientRect();
+    const magRect = mag.getBoundingClientRect();
+    const magWellLeft = gunRect.left + gunRect.width * 0.4;
+    const magWellRight = gunRect.left + gunRect.width * 0.7;
+    const magWellTop = gunRect.top + gunRect.height * 0.5;
+    const magWellBottom = gunRect.bottom;
+    const magCenterX = magRect.left + magRect.width / 2;
+    const magCenterY = magRect.top + magRect.height / 2;
+    if (magCenterX > magWellLeft && magCenterX < magWellRight && magCenterY > magWellTop && magCenterY < magWellBottom) {
+        isDraggingMag = false;
+        magInserted = true;
+        mag.style.display = 'none';
+        shellEjected = false;
+        magazineLoaded = false;
+        gunTop.style.left = '30px';
+        gunTop.style.cursor = 'grab';
+        showNotification('Magazine inserted.');
+        return true;
+    }
+    return false;
+  }
+
+  // --- Shooting ---
+  function shoot() {
+    if (!magazineLoaded) {
+      showNotification('Cock the slide to chamber a round!');
+      return;
+    }
+    if (ammoCount <= 0) {
+      showNotification('Out of ammo! Ejecting empty magazine.');
+      ejectMagazine();
+      return;
+    }
+    ammoCount--;
+    updateAmmoIndicator();
+    const bullet = document.createElement('div');
+    bullet.classList.add('bullet');
+    const gunRect = gun.getBoundingClientRect();
+    bullet.style.left = (gunRect.left + gunRect.width - 10) + 'px';
+    bullet.style.top = (gunRect.top + 15) + 'px';
+    document.body.appendChild(bullet);
+    gun.style.boxShadow = '0 0 15px 6px #ff8c00';
+    setTimeout(() => gun.style.boxShadow = '2px 3px 8px rgba(0,0,0,0.6)', 100);
+    const startTime = performance.now();
+    requestAnimationFrame(function animateBullet(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = elapsed / 800;
+      if (progress < 1) {
+        bullet.style.left = (gunRect.left + gunRect.width - 10 + progress * 800) + 'px';
+        requestAnimationFrame(animateBullet);
+      } else {
+        bullet.remove();
+      }
+    });
+  }
+  
+  function updateAmmoIndicator() {
+    ammoLoadedIndicator.textContent = `${loadedAmmoCount} / ${maxAmmo}`;
+  }
+
+  function ejectMagazine() {
+    mag.style.display = 'block';
+    magPos.x = magInitialPos.x;
+    magPos.y = magInitialPos.y;
+    mag.style.left = magPos.x + 'px';
+    mag.style.top = magPos.y + 'px';
+    mag.style.borderColor = '#333';
+    magInserted = false;
+    magazineLoaded = false;
+    ammoCount = 0;
+    loadedAmmoCount = 0;
+    updateAmmoIndicator();
+    gunTop.style.left = '30px';
+    gunTop.style.cursor = 'default';
+  }
+
+  gun.addEventListener('click', shoot);
+
+  // --- Ammo Creation ---
+  function createAmmo() {
+    const initialAmmoX = 600; 
+    const initialAmmoY = 1000;
+    const ammoSpacingX = 25, ammoSpacingY = 30;
+    for (let i = 0; i < maxAmmo; i++) {
+      const ammo = document.createElement('div');
+      ammo.className = 'ammo';
+      const ammoLeft = initialAmmoX + (i % 6) * ammoSpacingX;
+      const ammoTop = initialAmmoY + Math.floor(i / 6) * ammoSpacingY;
+      ammo.style.left = ammoLeft + 'px';
+      ammo.style.top = ammoTop + 'px';
+      scene.appendChild(ammo);
+    }
+  }
+
+  // --- Magazine Dragging ---
+  let isDraggingMag = false, startExMag, startEyMag, magPos = { x: 0, y: 0 }, magInitialPos = { x: 0, y: 0 };
+  mag.addEventListener('mousedown', (e) => {
+    if (magInserted) return;
+    e.preventDefault();
+    isDraggingMag = true;
+    mag.style.cursor = 'grabbing';
+    mag.style.transition = 'none';
+    startExMag = e.clientX;
+    startEyMag = e.clientY;
+  });
+  
+  // --- Ammo Selection & Dragging ---
+  let isDraggingGroup = false;
+  let dragStart = { x: 0, y: 0 };
+  
+  scene.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('ammo')) {
+      const ammo = e.target;
+      if (!e.ctrlKey && !ammo.classList.contains('selected')) {
+        clearSelection();
+      }
+      if (e.ctrlKey) {
+          ammo.classList.toggle('selected');
+      } else {
+          ammo.classList.add('selected');
+      }
+      isDraggingGroup = true;
+      dragStart.x = e.clientX;
+      dragStart.y = e.clientY;
+      document.querySelectorAll('.ammo.selected').forEach(selectedAmmo => {
+        selectedAmmo._dragStartX = selectedAmmo.offsetLeft;
+        selectedAmmo._dragStartY = selectedAmmo.offsetTop;
+      });
+    } else if (e.target === scene) {
+      clearSelection();
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (isDraggingGroup) {
+      let total_dx = e.clientX - dragStart.x;
+      let total_dy = e.clientY - dragStart.y;
+      document.querySelectorAll('.ammo.selected').forEach(ammo => {
+        ammo.style.left = (ammo._dragStartX + total_dx) + 'px';
+        ammo.style.top = (ammo._dragStartY + total_dy) + 'px';
+      });
+    }
+    if (isDraggingMag) {
+      let dx = e.clientX - startExMag;
+      let dy = e.clientY - startEyMag;
+      magPos.x += dx;
+      magPos.y += dy;
+      mag.style.left = magPos.x + 'px';
+      mag.style.top = magPos.y + 'px';
+      startExMag = e.clientX;
+      startEyMag = e.clientY;
+      checkMagInserted();
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDraggingGroup) {
+      isDraggingGroup = false;
+      const magRect = mag.getBoundingClientRect();
+      let loadedThisDrop = 0;
+      
+      const selectedAmmoElements = document.querySelectorAll('.ammo.selected');
+      
+      let isAnyAmmoOverMag = false;
+      for (const ammo of selectedAmmoElements) {
+        const ammoRect = ammo.getBoundingClientRect();
+        if (ammoRect.right > magRect.left && ammoRect.left < magRect.right && ammoRect.bottom > magRect.top && ammoRect.top < magRect.bottom) {
+          isAnyAmmoOverMag = true;
+          break;
+        }
+      }
+
+      if (isAnyAmmoOverMag) {
+        for (const ammo of selectedAmmoElements) {
+          if (loadedAmmoCount < maxAmmo) {
+            ammo.remove();
+            loadedAmmoCount++;
+            loadedThisDrop++;
+          } else {
+            break; 
+          }
+        }
+      }
+
+      if (loadedThisDrop > 0) {
+        updateAmmoIndicator();
+        mag.style.borderColor = '#ffeb3b';
+        showNotification(`Loaded ${loadedThisDrop} rounds.`);
+      }
+      
+      clearSelection();
+    }
+    if (isDraggingMag) {
+      isDraggingMag = false;
+      mag.style.cursor = 'grab';
+      if (!magInserted) {
+        mag.style.transition = 'left 0.3s, top 0.3s';
+        magPos.x = magInitialPos.x;
+        magPos.y = magInitialPos.y;
+        mag.style.left = magPos.x + 'px';
+        mag.style.top = magPos.y + 'px';
+      }
+    }
+  });
+  
+  function clearSelection() {
+    document.querySelectorAll('.ammo.selected').forEach(ammo => ammo.classList.remove('selected'));
+  }
+
+  // --- UI & Game Start ---
+  function showNotification(message, duration = 2000) {
+    notification.textContent = message;
+    notification.style.opacity = '1';
+    setTimeout(() => {
+        notification.style.opacity = '0';
+    }, duration);
+  }
+
+  playBtn.addEventListener('click', () => {
+    overlay.style.display = 'none';
+    createAmmo();
+    magInitialPos.x = mag.offsetLeft;
+    magInitialPos.y = mag.offsetTop;
+    magPos.x = magInitialPos.x;
+    magPos.y = magInitialPos.y;
+    mag.style.transform = 'translateX(-50%)';
+    mag.style.left = magPos.x + 'px';
+    mag.style.top = magPos.y + 'px';
+    updateAmmoIndicator();
+    gunTop.style.cursor = 'default';
+  });
+</script>
+</body>
+</html>
