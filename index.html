@@ -98,7 +98,7 @@
 
     #gun-frame {
       position: absolute;
-      width: 270px; /* wydłużone z 200px */
+      width: 290px; /* dopasowane do szerokości Slide */
       height: 40px;
       background: #4a4a4a;
       top: 30px;
@@ -113,7 +113,7 @@
         height: 90px;
         background: #4a4a4a;
         top: 30px; 
-        left: 30px;
+        left: 25px; /* bliżej lewej krawędzi */
         transform: skewX(-10deg);
         border-radius: 4px;
     }
@@ -123,7 +123,7 @@
         width: 30px;
         height: 35px;
         top: 60px; 
-        left: 75px;
+        left: 70px; /* bliżej środka broni */
         border: 8px solid #4a4a4a;
         border-radius: 10px 10px 20px 20px;
         border-top: none;
@@ -412,6 +412,9 @@
     updateAmmoIndicator();
     gunSlide.style.left = '-10px'; 
     gunSlide.style.cursor = 'default'; 
+    // Dodano: przywracanie amunicji po powrocie magazynka
+    document.querySelectorAll('.ammo').forEach(ammo => ammo.remove());
+    createAmmo();
   }
 
   function updateAmmoIndicator() {
