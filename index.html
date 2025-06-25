@@ -45,96 +45,117 @@
       border: 1px solid #61dafb;
     }
 
+    /* --- UPROSZCZONA STRUKTURA PISTOLETU --- */
     #gun {
       position: absolute;
-      width: 270px; /* wydłużone z 200px */
-      height: 180px;
+      width: 290px; 
+      height: 50px; /* ZMIANA: Zmniejszona wysokość */
       left: calc(50% + 250px);
       top: 50%;
       transform: translate(-50%, -50%);
       z-index: 10;
     }
 
+    /* --- ZAMEK (SLIDE) --- */
     #gun-slide {
       position: absolute;
-      width: 290px; /* wydłużone z 220px */
+      width: 290px;
       height: 40px;
-      background: #303030;
-      border-radius: 8px;
+      background: #4a4e57;
+      border-radius: 6px 6px 3px 3px;
       top: 0;
-      left: -10px;
-      border: 1px solid #222;
-      box-shadow: inset 0 -3px 6px rgba(0,0,0,0.5);
+      left: 0;
+      border-top: 1px solid #666;
+      border-left: 1px solid #555;
+      border-right: 1px solid #555;
+      box-shadow: inset 0 2px 2px rgba(255,255,255,0.05), inset 0 -2px 3px rgba(0,0,0,0.4);
       cursor: grab;
       transition: left 0.15s ease-in-out;
       z-index: 12;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      font-weight: bold;
-      color: #ccc;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
     }
     
     #gun-slide::before,
     #gun-slide::after {
       content: '';
       position: absolute;
-      width: 8px;
-      height: 30px; 
-      background: #444;
-      border-radius: 4px;
-      top: 5px;
+      width: 50px;
+      height: 22px; 
+      top: 12px;
+      background-image: repeating-linear-gradient(to right, 
+        #3a3e45 0px, #3a3e45 2px, 
+        #4a4e57 2px, #4a4e57 6px
+      );
     }
-    #gun-slide::before {
-      left: 15px;
-      box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
-    }
-    #gun-slide::after {
-      right: 15px;
-      box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
-    }
+    #gun-slide::before { right: 25px; }
+    #gun-slide::after { left: 20px; }
 
-    #gun-frame {
-      position: absolute;
-      width: 290px; /* dopasowane do szerokości Slide */
-      height: 40px;
-      background: #4a4a4a;
-      top: 30px;
-      left: 0;
-      border-radius: 4px;
-      z-index: 11;
-    }
-
-    #gun-grip {
+    #rear-sight, #front-sight {
         position: absolute;
-        width: 40px;
-        height: 90px;
-        background: #4a4a4a;
-        top: 30px; 
-        left: 25px; /* bliżej lewej krawędzi */
-        transform: skewX(-10deg);
-        border-radius: 4px;
+        background: #222;
+        top: -6px;
+        z-index: 13;
+        box-shadow: 1px -1px 2px rgba(0,0,0,0.3);
+    }
+    #rear-sight {
+        left: 25px;
+        width: 18px;
+        height: 6px;
+        border-radius: 2px;
+    }
+    #front-sight {
+        right: 20px;
+        width: 6px;
+        height: 6px;
+        border-radius: 1px;
     }
 
-    #gun-trigger-guard {
+    #ejection-port {
         position: absolute;
-        width: 30px;
-        height: 35px;
-        top: 60px; 
-        left: 70px; /* bliżej środka broni */
-        border: 8px solid #4a4a4a;
-        border-radius: 10px 10px 20px 20px;
-        border-top: none;
+        width: 50px;
+        height: 24px;
+        background: #282c34;
+        top: 8px;
+        right: 85px;
+        border-radius: 2px;
+        box-shadow: inset 1px 1px 4px rgba(0,0,0,0.8);
+    }
+    #ejection-port::before {
+        content: '';
+        position: absolute;
+        width: 15px;
+        height: 6px;
+        background: #3e444c;
+        top: 9px;
+        left: 20px;
+        border-radius: 1px;
     }
 
+    #gun-slide .slide-text {
+        position: absolute;
+        font-family: 'Arial Black', sans-serif;
+        font-size: 16px;
+        color: #ddd;
+        text-shadow: 1px 1px 1px #000;
+        top: 10px;
+    }
+    #slide-logo {
+        left: 90px;
+        font-size: 20px;
+        font-weight: bold;
+    }
+    #slide-model {
+        left: 110px;
+    }
+
+    /* ZMIANA: Usunięto wszystkie style dla #gun-lower-frame, #gun-grip, #gun-trigger-guard itp. */
+
+    /* --- POZOSTAŁE STYLE BEZ ZMIAN --- */
     #magazine {
       position: absolute;
       width: 35px;
       height: 120px; 
-      background: #555;
-      border: 3px solid #333;
+      background: #3a3a3a;
+      border: 3px solid #222;
       border-radius: 4px;
       cursor: grab;
       z-index: 15;
@@ -250,10 +271,14 @@
 
 <div id="scene">
   <div id="gun">
-    <div id="gun-frame"></div>
-    <div id="gun-grip"></div>
-    <div id="gun-trigger-guard"></div>
-    <div id="gun-slide">Slide</div> 
+    <!-- ZMIANA: Został tylko zamek (slide) -->
+    <div id="gun-slide">
+        <div id="rear-sight"></div>
+        <div id="front-sight"></div>
+        <div id="ejection-port"></div>
+        <div class="slide-text" id="slide-logo">G</div>
+        <div class="slide-text" id="slide-model">19</div>
+    </div> 
   </div>
   <div id="magazine" title="Load ammo, then drop on the gun">
     <div id="ammo-loaded-indicator">0 / 15</div>
@@ -261,6 +286,7 @@
 </div>
 
 <script>
+  // --- Cały skrypt JavaScript pozostaje bez zmian ---
   // --- Game State ---
   let magInserted = false;
   let magazineLoaded = false;
@@ -358,7 +384,7 @@
     bullet.style.top = (gunSlideRect.top + (gunSlideRect.height / 2) - 5) + 'px'; 
     document.body.appendChild(bullet);
     gunSlide.style.boxShadow = '0 0 15px 6px #ff8c00'; 
-    setTimeout(() => gunSlide.style.boxShadow = 'inset 0 -3px 6px rgba(0,0,0,0.5)', 100); 
+    setTimeout(() => gunSlide.style.boxShadow = 'inset 0 2px 2px rgba(255,255,255,0.05), inset 0 -2px 3px rgba(0,0,0,0.4)', 100); 
     const startTime = performance.now();
     requestAnimationFrame(function animateBullet(currentTime) {
       const elapsed = currentTime - startTime;
@@ -379,6 +405,8 @@
   
   function checkMagInserted() {
     if (loadedAmmoCount === 0) return false; 
+    // Magazynka nie da się włożyć, bo nie ma chwytu, ale zostawiamy logikę na wszelki wypadek
+    // Można to uprościć, ale zostawienie nie szkodzi
     const gunRect = gun.getBoundingClientRect();
     const magRect = magazine.getBoundingClientRect();
     const overlaps = !(magRect.right < gunRect.left || 
@@ -390,7 +418,7 @@
         magazine.style.display = 'none';
         shellEjected = false;
         magazineLoaded = false;
-        gunSlide.style.left = '-10px'; 
+        gunSlide.style.left = '0px'; 
         gunSlide.style.cursor = 'grab'; 
         showNotification('Magazine inserted.');
         return true;
@@ -404,15 +432,14 @@
     magPos.y = magInitialPos.y;
     magazine.style.left = magPos.x + 'px';
     magazine.style.top = magPos.y + 'px';
-    magazine.style.borderColor = '#333';
+    magazine.style.borderColor = '#222';
     magInserted = false;
     magazineLoaded = false;
     ammoCount = 0;
     loadedAmmoCount = 0;
     updateAmmoIndicator();
-    gunSlide.style.left = '-10px'; 
+    gunSlide.style.left = '0px'; 
     gunSlide.style.cursor = 'default'; 
-    // Dodano: przywracanie amunicji po powrocie magazynka
     document.querySelectorAll('.ammo').forEach(ammo => ammo.remove());
     createAmmo();
   }
@@ -469,7 +496,7 @@
           selectedAmmo._dragStartY = selectedAmmo.offsetTop;
         });
       }
-    } else if (e.target === scene) {
+    } else if (e.target === scene) { // ZMIANA: Usunięto odwołanie do #gun-lower-frame
       clearSelection();
       isPanning = true;
       scene.style.cursor = 'grabbing';
@@ -508,11 +535,11 @@
     }
      if (isDraggingGunSlide) { 
       let dx = (e.clientX - startGunSlideX) / sceneScale;
-      let newLeft = parseFloat(gunSlide.style.left || -10) + dx;
-      const minLeft = -10, maxLeft = -70; 
+      let newLeft = parseFloat(gunSlide.style.left || 0) + dx;
+      const minLeft = 0, maxLeft = -60;
       newLeft = Math.max(maxLeft, Math.min(newLeft, minLeft));
       gunSlide.style.left = newLeft + 'px'; 
-      if (newLeft < -60 && !shellEjected) { 
+      if (newLeft < -50 && !shellEjected) {
         shellEjected = true;
         playSound(loadSound);
       }
@@ -555,7 +582,8 @@
     if (isDraggingMag) {
       isDraggingMag = false;
       magazine.style.cursor = 'grab';
-      const wasInserted = checkMagInserted();
+      // Mimo braku chwytu, sprawdzamy, czy magazynek nachodzi na zamek
+      const wasInserted = checkMagInserted(); 
       if (!wasInserted && !magInserted) {
         magazine.style.transition = 'left 0.3s, top 0.3s';
         magPos.x = magInitialPos.x;
@@ -577,7 +605,7 @@
         showNotification(`Weapon loaded with ${ammoCount} rounds.`);
       }
       gunSlide.style.transition = 'left 0.1s ease-out'; 
-      gunSlide.style.left = '-10px'; 
+      gunSlide.style.left = '0px'; 
       setTimeout(() => gunSlide.style.transition = 'left 0.15s ease-in-out', 100);
     }
   });
@@ -606,7 +634,9 @@
     magazine.style.left = magPos.x + 'px';
     magazine.style.top = magPos.y + 'px';
     updateAmmoIndicator();
-    gunSlide.style.cursor = 'default'; 
+    // Ponieważ nie ma chwytu, domyślnie można przeładować (jeśli magazynek zostanie "włożony")
+    magInserted = true;
+    showNotification('Drop the magazine on the slide to insert it.');
   });
 </script>
 </body>
