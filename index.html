@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Gun Game - Realistyczna Scena</title>
+  <title>Gun Game - Realistic Scene</title>
   <style>
     html, body {
       margin: 0;
@@ -47,31 +47,79 @@
 
     #gun {
       position: absolute;
-      width: 160px;
-      height: 60px;
-      background: #404040;
-      border-radius: 8px 8px 4px 4px;
-      box-shadow: 2px 3px 8px rgba(0,0,0,0.6);
-      z-index: 10;
+      width: 200px;
+      height: 150px;
       left: calc(50% + 250px);
       top: 50%;
-      transform: translateX(-50%);
-      border: 2px solid #333;
+      transform: translate(-50%, -50%);
+      z-index: 10;
     }
 
     #gun-top {
       position: absolute;
-      width: 120px;
-      height: 25px;
+      width: 200px;
+      height: 30px;
       background: #303030;
-      border-radius: 4px;
-      left: 30px;
-      top: -2px;
+      border-radius: 6px;
+      top: 0;
+      left: 0;
       border: 1px solid #222;
       box-shadow: inset 0 -2px 4px rgba(0,0,0,0.4);
       cursor: grab;
       transition: left 0.15s ease-in-out;
+      z-index: 12;
     }
+    
+    #gun-frame {
+      position: absolute;
+      width: 200px; /* MODIFIED: Matched to gun-top width */
+      height: 40px;
+      background: #4a4a4a;
+      top: 30px;
+      left: 0;
+      border-radius: 4px;
+      z-index: 11;
+    }
+
+    #gun-grip {
+        position: absolute;
+        width: 40px;
+        height: 90px;
+        background: #4a4a4a;
+        top: 30px;
+        left: 30px;
+        transform: skewX(-10deg);
+        border-radius: 4px;
+    }
+
+    #gun-trigger-guard {
+        position: absolute;
+        width: 30px;
+        height: 35px;
+        top: 60px;
+        left: 75px;
+        border: 8px solid #4a4a4a;
+        border-radius: 10px 10px 20px 20px;
+        border-top: none;
+    }
+
+    #gun-magazine-well {
+        position: absolute;
+        width: 32px;
+        height: 10px;
+        background-color: #555;
+        border: 2px solid #333;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        bottom: 22px;
+        left: 32px;
+        transform: skewX(-10deg);
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.2s;
+        z-index: 13;
+    }
+
 
     #magazine {
       position: absolute;
@@ -84,7 +132,7 @@
       z-index: 15;
       left: 50%;
       top: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
       box-shadow: 2px 2px 6px rgba(0,0,0,0.5);
     }
 
@@ -194,6 +242,10 @@
 
 <div id="scene">
   <div id="gun">
+    <div id="gun-frame"></div>
+    <div id="gun-grip"></div>
+    <div id="gun-trigger-guard"></div>
+    <div id="gun-magazine-well"></div>
     <div id="gun-top"></div>
   </div>
   <div id="magazine" title="Load ammo, then drag here">
@@ -215,6 +267,7 @@
   const gun = document.getElementById('gun');
   const gunTop = document.getElementById('gun-top');
   const mag = document.getElementById('magazine');
+  const gunMagWell = document.getElementById('gun-magazine-well');
   const overlay = document.getElementById('overlay');
   const playBtn = document.getElementById('playBtn');
   const notification = document.getElementById('notification');
@@ -222,6 +275,9 @@
   
   // --- Scene & Movement ---
   let sceneTranslateX = 0, sceneTranslateY = 0;
+  let isPanning = false;
+  let panStartX, panStartY, startSceneTranslateX, startSceneTranslateY;
+  
   window.addEventListener('keydown', (e) => {
     const moveSpeed = 20;
     if (e.ctrlKey && e.key.toLowerCase() === 'a') {
@@ -245,7 +301,7 @@
     }
   });
 
-  // --- Gun Slide Interaction (Chambering) ---
+  // --- Gun Slide Interaction ---
   let isDraggingGunTop = false;
   let startGunTopX = 0;
   let shellEjected = false;
@@ -265,54 +321,27 @@
     gunTop.style.cursor = 'grabbing';
   });
 
-  document.addEventListener('mousemove', (e) => {
-    if (isDraggingGunTop) {
-      let dx = e.clientX - startGunTopX;
-      let newLeft = parseFloat(gunTop.style.left) + dx;
-      const minLeft = 30, maxLeft = -30;
-      newLeft = Math.max(maxLeft, Math.min(newLeft, minLeft));
-      gunTop.style.left = newLeft + 'px';
-      if (newLeft < -20 && !shellEjected) {
-        shellEjected = true;
-        playSound(loadSound);
-      }
-      startGunTopX = e.clientX;
-    }
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (isDraggingGunTop) {
-      isDraggingGunTop = false;
-      gunTop.style.cursor = 'grab';
-      if (shellEjected) {
-        magazineLoaded = true;
-        ammoCount = loadedAmmoCount;
-        showNotification(`Weapon loaded with ${ammoCount} rounds.`);
-      }
-      gunTop.style.transition = 'left 0.1s ease-out';
-      gunTop.style.left = '30px';
-      setTimeout(() => gunTop.style.transition = 'left 0.15s ease-in-out', 100);
-    }
-  });
-
-  // --- Magazine Insertion Check ---
+  // --- Magazine Insertion ---
   function checkMagInserted() {
     if (loadedAmmoCount === 0 || isDraggingMag === false) return false;
     const gunRect = gun.getBoundingClientRect();
     const magRect = mag.getBoundingClientRect();
-    const magWellLeft = gunRect.left + gunRect.width * 0.4;
-    const magWellRight = gunRect.left + gunRect.width * 0.7;
-    const magWellTop = gunRect.top + gunRect.height * 0.5;
+    const magWellLeft = gunRect.left + gun.offsetWidth * 0.15;
+    const magWellRight = gunRect.left + gun.offsetWidth * 0.45;
+    const magWellTop = gunRect.top + gun.offsetHeight * 0.5;
     const magWellBottom = gunRect.bottom;
     const magCenterX = magRect.left + magRect.width / 2;
     const magCenterY = magRect.top + magRect.height / 2;
+
     if (magCenterX > magWellLeft && magCenterX < magWellRight && magCenterY > magWellTop && magCenterY < magWellBottom) {
         isDraggingMag = false;
         magInserted = true;
         mag.style.display = 'none';
+        gunMagWell.style.visibility = 'visible';
+        gunMagWell.style.opacity = '1';
         shellEjected = false;
         magazineLoaded = false;
-        gunTop.style.left = '30px';
+        gunTop.style.left = '0px';
         gunTop.style.cursor = 'grab';
         showNotification('Magazine inserted.');
         return true;
@@ -335,18 +364,18 @@
     updateAmmoIndicator();
     const bullet = document.createElement('div');
     bullet.classList.add('bullet');
-    const gunRect = gun.getBoundingClientRect();
-    bullet.style.left = (gunRect.left + gunRect.width - 10) + 'px';
-    bullet.style.top = (gunRect.top + 15) + 'px';
+    const gunTopRect = gunTop.getBoundingClientRect();
+    bullet.style.left = (gunTopRect.right - 10) + 'px';
+    bullet.style.top = (gunTopRect.top + (gunTopRect.height / 2) - 5) + 'px';
     document.body.appendChild(bullet);
-    gun.style.boxShadow = '0 0 15px 6px #ff8c00';
-    setTimeout(() => gun.style.boxShadow = '2px 3px 8px rgba(0,0,0,0.6)', 100);
+    gunTop.style.boxShadow = '0 0 15px 6px #ff8c00';
+    setTimeout(() => gunTop.style.boxShadow = 'inset 0 -2px 4px rgba(0,0,0,0.4)', 100);
     const startTime = performance.now();
     requestAnimationFrame(function animateBullet(currentTime) {
       const elapsed = currentTime - startTime;
       const progress = elapsed / 800;
       if (progress < 1) {
-        bullet.style.left = (gunRect.left + gunRect.width - 10 + progress * 800) + 'px';
+        bullet.style.left = (gunTopRect.right - 10 + progress * 800) + 'px';
         requestAnimationFrame(animateBullet);
       } else {
         bullet.remove();
@@ -360,6 +389,8 @@
 
   function ejectMagazine() {
     mag.style.display = 'block';
+    gunMagWell.style.visibility = 'hidden';
+    gunMagWell.style.opacity = '0';
     magPos.x = magInitialPos.x;
     magPos.y = magInitialPos.y;
     mag.style.left = magPos.x + 'px';
@@ -370,7 +401,7 @@
     ammoCount = 0;
     loadedAmmoCount = 0;
     updateAmmoIndicator();
-    gunTop.style.left = '30px';
+    gunTop.style.left = '0px';
     gunTop.style.cursor = 'default';
   }
 
@@ -379,7 +410,7 @@
   // --- Ammo Creation ---
   function createAmmo() {
     const initialAmmoX = 600; 
-    const initialAmmoY = 1000;
+    const initialAmmoY = 950;
     const ammoSpacingX = 25, ammoSpacingY = 30;
     for (let i = 0; i < maxAmmo; i++) {
       const ammo = document.createElement('div');
@@ -404,7 +435,7 @@
     startEyMag = e.clientY;
   });
   
-  // --- Ammo Selection & Dragging ---
+  // --- Global Drag & Drop Logic ---
   let isDraggingGroup = false;
   let dragStart = { x: 0, y: 0 };
   
@@ -414,11 +445,7 @@
       if (!e.ctrlKey && !ammo.classList.contains('selected')) {
         clearSelection();
       }
-      if (e.ctrlKey) {
-          ammo.classList.toggle('selected');
-      } else {
-          ammo.classList.add('selected');
-      }
+      ammo.classList.toggle('selected');
       isDraggingGroup = true;
       dragStart.x = e.clientX;
       dragStart.y = e.clientY;
@@ -428,6 +455,12 @@
       });
     } else if (e.target === scene) {
       clearSelection();
+      isPanning = true;
+      scene.style.cursor = 'grabbing';
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      startSceneTranslateX = sceneTranslateX;
+      startSceneTranslateY = sceneTranslateY;
     }
   });
 
@@ -451,6 +484,26 @@
       startEyMag = e.clientY;
       checkMagInserted();
     }
+    if (isPanning) {
+      const dx = e.clientX - panStartX;
+      const dy = e.clientY - panStartY;
+      sceneTranslateX = startSceneTranslateX + dx;
+      sceneTranslateY = startSceneTranslateY + dy;
+      scene.style.transform = `translate(calc(-50% + ${sceneTranslateX}px), calc(-50% + ${sceneTranslateY}px))`;
+      coordsDisplay.textContent = `X: ${-sceneTranslateX}, Y: ${-sceneTranslateY}`;
+    }
+     if (isDraggingGunTop) {
+      let dx = e.clientX - startGunTopX;
+      let newLeft = parseFloat(gunTop.style.left) + dx;
+      const minLeft = 0, maxLeft = -60;
+      newLeft = Math.max(maxLeft, Math.min(newLeft, minLeft));
+      gunTop.style.left = newLeft + 'px';
+      if (newLeft < -50 && !shellEjected) {
+        shellEjected = true;
+        playSound(loadSound);
+      }
+      startGunTopX = e.clientX;
+    }
   });
 
   document.addEventListener('mouseup', () => {
@@ -458,9 +511,7 @@
       isDraggingGroup = false;
       const magRect = mag.getBoundingClientRect();
       let loadedThisDrop = 0;
-      
       const selectedAmmoElements = document.querySelectorAll('.ammo.selected');
-      
       let isAnyAmmoOverMag = false;
       for (const ammo of selectedAmmoElements) {
         const ammoRect = ammo.getBoundingClientRect();
@@ -469,7 +520,6 @@
           break;
         }
       }
-
       if (isAnyAmmoOverMag) {
         for (const ammo of selectedAmmoElements) {
           if (loadedAmmoCount < maxAmmo) {
@@ -481,13 +531,11 @@
           }
         }
       }
-
       if (loadedThisDrop > 0) {
         updateAmmoIndicator();
         mag.style.borderColor = '#ffeb3b';
         showNotification(`Loaded ${loadedThisDrop} rounds.`);
       }
-      
       clearSelection();
     }
     if (isDraggingMag) {
@@ -500,6 +548,22 @@
         mag.style.left = magPos.x + 'px';
         mag.style.top = magPos.y + 'px';
       }
+    }
+    if (isPanning) {
+      isPanning = false;
+      scene.style.cursor = 'grab';
+    }
+    if (isDraggingGunTop) {
+      isDraggingGunTop = false;
+      gunTop.style.cursor = 'grab';
+      if (shellEjected) {
+        magazineLoaded = true;
+        ammoCount = loadedAmmoCount;
+        showNotification(`Weapon loaded with ${ammoCount} rounds.`);
+      }
+      gunTop.style.transition = 'left 0.1s ease-out';
+      gunTop.style.left = '0px';
+      setTimeout(() => gunTop.style.transition = 'left 0.15s ease-in-out', 100);
     }
   });
   
@@ -523,7 +587,7 @@
     magInitialPos.y = mag.offsetTop;
     magPos.x = magInitialPos.x;
     magPos.y = magInitialPos.y;
-    mag.style.transform = 'translateX(-50%)';
+    mag.style.transform = 'translate(-50%, -50%)';
     mag.style.left = magPos.x + 'px';
     mag.style.top = magPos.y + 'px';
     updateAmmoIndicator();
