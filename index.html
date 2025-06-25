@@ -45,11 +45,11 @@
       border: 1px solid #61dafb;
     }
 
-    /* --- UPROSZCZONA STRUKTURA PISTOLETU --- */
+    /* --- ZAKTUALIZOWANA STRUKTURA PISTOLETU --- */
     #gun {
       position: absolute;
       width: 290px; 
-      height: 50px; /* ZMIANA: Zmniejszona wysokość */
+      height: 150px; /* ZMIANA: Zmniejszona wysokość po usunięciu ramy */
       left: calc(50% + 250px);
       top: 50%;
       transform: translate(-50%, -50%);
@@ -96,18 +96,8 @@
         z-index: 13;
         box-shadow: 1px -1px 2px rgba(0,0,0,0.3);
     }
-    #rear-sight {
-        left: 25px;
-        width: 18px;
-        height: 6px;
-        border-radius: 2px;
-    }
-    #front-sight {
-        right: 20px;
-        width: 6px;
-        height: 6px;
-        border-radius: 1px;
-    }
+    #rear-sight { left: 25px; width: 18px; height: 6px; border-radius: 2px; }
+    #front-sight { right: 20px; width: 6px; height: 6px; border-radius: 1px; }
 
     #ejection-port {
         position: absolute;
@@ -119,35 +109,60 @@
         border-radius: 2px;
         box-shadow: inset 1px 1px 4px rgba(0,0,0,0.8);
     }
-    #ejection-port::before {
-        content: '';
+    #ejection-port::before { content: ''; position: absolute; width: 15px; height: 6px; background: #3e444c; top: 9px; left: 20px; border-radius: 1px; }
+
+    #gun-slide .slide-text { position: absolute; font-family: 'Arial Black', sans-serif; font-size: 16px; color: #ddd; text-shadow: 1px 1px 1px #000; top: 10px; }
+    #slide-logo { left: 90px; font-size: 20px; font-weight: bold; }
+    #slide-model { left: 110px; }
+
+    /* ZMIANA: Usunięto #gun-lower-frame, zmieniono pozycję chwytu i spustu */
+
+    #gun-grip {
         position: absolute;
-        width: 15px;
-        height: 6px;
-        background: #3e444c;
-        top: 9px;
-        left: 20px;
-        border-radius: 1px;
+        width: 55px;
+        height: 110px;
+        background-color: #333;
+        background-image:
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1px, transparent 0);
+        background-size: 4px 4px;
+        top: 35px; /* NOWA POZYCJA: Wyżej, pod zamkiem */
+        left: 45px; /* NOWA POZYCJA: Bardziej w lewo */
+        border-radius: 8px 8px 12px 12px;
+        border: 1px solid #222;
+        z-index: 8;
+        cursor: grab;
+        transform: skewX(-8deg); /* Dodaje lekki skos dla lepszego wyglądu */
+    }
+    
+    #gun-trigger-guard {
+        position: absolute;
+        width: 55px;
+        height: 30px;
+        border: 8px solid #3a3e45;
+        border-top: none;
+        border-radius: 0 0 25px 25px;
+        top: 38px; /* NOWA POZYCJA: Dopasowana do chwytu */
+        left: 105px; /* NOWA POZYCJA: Dopasowana do chwytu */
+        z-index: 11;
     }
 
-    #gun-slide .slide-text {
+    #gun-trigger {
         position: absolute;
-        font-family: 'Arial Black', sans-serif;
-        font-size: 16px;
-        color: #ddd;
-        text-shadow: 1px 1px 1px #000;
-        top: 10px;
+        width: 8px;
+        height: 20px;
+        background: #222;
+        border: 1px solid #444;
+        top: -5px;
+        left: 23px; /* Dopasowana pozycja wewnątrz osłony */
+        border-radius: 2px 2px 8px 8px;
+        cursor: pointer;
+        transition: transform 0.05s ease-out, background-color 0.05s;
+        z-index: 10;
     }
-    #slide-logo {
-        left: 90px;
-        font-size: 20px;
-        font-weight: bold;
+    #gun-trigger:active {
+        transform: translateY(3px);
+        background: #111;
     }
-    #slide-model {
-        left: 110px;
-    }
-
-    /* ZMIANA: Usunięto wszystkie style dla #gun-lower-frame, #gun-grip, #gun-trigger-guard itp. */
 
     /* --- POZOSTAŁE STYLE BEZ ZMIAN --- */
     #magazine {
@@ -192,70 +207,22 @@
     }
 
     #overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(20, 20, 20, 0.95);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 25px;
-      z-index: 2000;
-      font-family: 'Arial Black', Gadget, sans-serif;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 25px; z-index: 2000; font-family: 'Arial Black', Gadget, sans-serif;
     }
-    
-    #overlay div:first-child {
-      font-size: 48px;
-      font-weight: bold;
-      color: #61dafb;
-      text-shadow: 0 0 10px #61dafb, 0 0 20px #61dafb;
-    }
+    #overlay div:first-child { font-size: 48px; font-weight: bold; color: #61dafb; text-shadow: 0 0 10px #61dafb, 0 0 20px #61dafb; }
+    .button { padding: 15px 30px; background: #2196f3; border: none; border-radius: 8px; color: white; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: background-color 0.3s, transform 0.2s; }
+    .button:hover { background-color: #0b7dda; transform: translateY(-2px); }
 
-    .button {
-      padding: 15px 30px;
-      background: #2196f3;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-size: 22px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      transition: background-color 0.3s, transform 0.2s;
-    }
-    .button:hover {
-      background-color: #0b7dda;
-      transform: translateY(-2px);
-    }
-
-    #ammo-loaded-indicator {
-        position: absolute;
-        bottom: 5px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 14px;
-        color: #ffeb3b;
-        background: rgba(0,0,0,0.5);
-        padding: 2px 5px;
-        border-radius: 3px;
-    }
+    #ammo-loaded-indicator { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); font-size: 14px; color: #ffeb3b; background: rgba(0,0,0,0.5); padding: 2px 5px; border-radius: 3px; }
     
     #notification {
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: rgba(30,30,30,0.9);
-        color: white;
-        padding: 12px 25px;
-        border-radius: 8px;
-        border: 1px solid #61dafb;
-        z-index: 3000;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease-in-out;
-        font-size: 16px;
+        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+        background-color: rgba(30,30,30,0.9); color: white; padding: 12px 25px; border-radius: 8px;
+        border: 1px solid #61dafb; z-index: 3000; opacity: 0; pointer-events: none;
+        transition: opacity 0.3s ease-in-out; font-size: 16px;
     }
   </style>
 </head>
@@ -271,7 +238,6 @@
 
 <div id="scene">
   <div id="gun">
-    <!-- ZMIANA: Został tylko zamek (slide) -->
     <div id="gun-slide">
         <div id="rear-sight"></div>
         <div id="front-sight"></div>
@@ -279,14 +245,18 @@
         <div class="slide-text" id="slide-logo">G</div>
         <div class="slide-text" id="slide-model">19</div>
     </div> 
+    <!-- ZMIANA: Chwyt i osłona spustu są teraz dziećmi #gun -->
+    <div id="gun-grip"></div>
+    <div id="gun-trigger-guard">
+        <div id="gun-trigger"></div>
+    </div>
   </div>
-  <div id="magazine" title="Load ammo, then drop on the gun">
+  <div id="magazine" title="Load ammo, then drop on the gun grip">
     <div id="ammo-loaded-indicator">0 / 15</div>
   </div>
 </div>
 
 <script>
-  // --- Cały skrypt JavaScript pozostaje bez zmian ---
   // --- Game State ---
   let magInserted = false;
   let magazineLoaded = false;
@@ -304,6 +274,9 @@
   const playBtn = document.getElementById('playBtn');
   const notification = document.getElementById('notification');
   const ammoLoadedIndicator = document.getElementById('ammo-loaded-indicator');
+  const gunGrip = document.getElementById('gun-grip');
+  const gunTrigger = document.getElementById('gun-trigger');
+  // ZMIANA: usunięto gunLowerFrame
   
   // --- Scene & Camera Controls ---
   let sceneTranslateX = 0, sceneTranslateY = 0, sceneScale = 1;
@@ -360,12 +333,17 @@
   gunSlide.addEventListener('mousedown', (e) => { 
     if (!magInserted || magazineLoaded) return;
     e.preventDefault();
+    e.stopPropagation();
     isDraggingGunSlide = true; 
     startGunSlideX = e.clientX; 
     gunSlide.style.cursor = 'grabbing'; 
   });
 
   function shoot() {
+    if (!magInserted) {
+      showNotification('Insert a magazine first!');
+      return;
+    }
     if (!magazineLoaded) {
       showNotification('Cock the slide to chamber a round!');
       return;
@@ -398,28 +376,31 @@
     });
   }
 
-  gun.addEventListener('click', shoot);
+  gunTrigger.addEventListener('click', shoot);
 
   // --- Magazine & Ammo Logic ---
   let isDraggingMag = false, startMagDragX, startMagDragY, magPos = { x: 0, y: 0 }, magInitialPos = { x: 0, y: 0 };
   
   function checkMagInserted() {
-    if (loadedAmmoCount === 0) return false; 
-    // Magazynka nie da się włożyć, bo nie ma chwytu, ale zostawiamy logikę na wszelki wypadek
-    // Można to uprościć, ale zostawienie nie szkodzi
-    const gunRect = gun.getBoundingClientRect();
+    if (loadedAmmoCount === 0) {
+        showNotification("Magazine is empty. Load some ammo first.");
+        return false; 
+    }
+    const gripRect = gunGrip.getBoundingClientRect();
     const magRect = magazine.getBoundingClientRect();
-    const overlaps = !(magRect.right < gunRect.left || 
-                       magRect.left > gunRect.right || 
-                       magRect.bottom < gunRect.top || 
-                       magRect.top > gunRect.bottom);
-    if (overlaps) {
+    const magCenterX = magRect.left + magRect.width / 2;
+    const magCenterY = magRect.top + magRect.height / 2;
+    const gripContainsCenter = magCenterX > gripRect.left && magCenterX < gripRect.right && magCenterY > gripRect.top && magCenterY < gripRect.bottom;
+
+    if (gripContainsCenter) {
         magInserted = true;
         magazine.style.display = 'none';
         shellEjected = false;
         magazineLoaded = false;
         gunSlide.style.left = '0px'; 
         gunSlide.style.cursor = 'grab'; 
+        gunGrip.style.cursor = 'pointer';
+        gunGrip.title = 'Click to eject magazine';
         showNotification('Magazine inserted.');
         return true;
     }
@@ -440,12 +421,24 @@
     updateAmmoIndicator();
     gunSlide.style.left = '0px'; 
     gunSlide.style.cursor = 'default'; 
+    gunGrip.style.cursor = 'grab';
+    gunGrip.title = '';
     document.querySelectorAll('.ammo').forEach(ammo => ammo.remove());
     createAmmo();
   }
 
+  gunGrip.addEventListener('click', () => {
+    if (magInserted) {
+        showNotification('Magazine ejected.');
+        ejectMagazine();
+    }
+  });
+
   function updateAmmoIndicator() {
     ammoLoadedIndicator.textContent = `${loadedAmmoCount} / ${maxAmmo}`;
+    if(magazineLoaded) {
+        ammoLoadedIndicator.textContent = `${ammoCount} / ${maxAmmo}`;
+    }
   }
 
   function createAmmo() {
@@ -496,7 +489,8 @@
           selectedAmmo._dragStartY = selectedAmmo.offsetTop;
         });
       }
-    } else if (e.target === scene) { // ZMIANA: Usunięto odwołanie do #gun-lower-frame
+    } else if (e.target === scene || e.target === gunGrip) { // ZMIANA: usunięto #gun-lower-frame z warunku
+      if (magInserted && e.target === gunGrip) return; // Nie przesuwaj sceny, jeśli kliknięcie ma wyrzucić magazynek
       clearSelection();
       isPanning = true;
       scene.style.cursor = 'grabbing';
@@ -582,7 +576,6 @@
     if (isDraggingMag) {
       isDraggingMag = false;
       magazine.style.cursor = 'grab';
-      // Mimo braku chwytu, sprawdzamy, czy magazynek nachodzi na zamek
       const wasInserted = checkMagInserted(); 
       if (!wasInserted && !magInserted) {
         magazine.style.transition = 'left 0.3s, top 0.3s';
@@ -634,9 +627,7 @@
     magazine.style.left = magPos.x + 'px';
     magazine.style.top = magPos.y + 'px';
     updateAmmoIndicator();
-    // Ponieważ nie ma chwytu, domyślnie można przeładować (jeśli magazynek zostanie "włożony")
-    magInserted = true;
-    showNotification('Drop the magazine on the slide to insert it.');
+    showNotification('Drop the magazine on the grip to insert it.');
   });
 </script>
 </body>
