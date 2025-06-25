@@ -48,45 +48,73 @@
     #gun {
       position: absolute;
       width: 200px;
-      height: 150px;
+      height: 180px; /* ZWIĘKSZONE WYSOKOŚĆ RAMY */
       left: calc(50% + 250px);
       top: 50%;
       transform: translate(-50%, -50%);
       z-index: 10;
     }
 
-    #gun-top {
+    #gun-slide {
       position: absolute;
-      width: 200px;
-      height: 30px;
+      width: 220px; 
+      height: 40px; /* Standardowa wysokość suwadła */
       background: #303030;
-      border-radius: 6px;
+      border-radius: 8px;
       top: 0;
-      left: 0;
+      left: -10px; 
       border: 1px solid #222;
-      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.4);
+      box-shadow: inset 0 -3px 6px rgba(0,0,0,0.5);
       cursor: grab;
       transition: left 0.15s ease-in-out;
       z-index: 12;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #ccc;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
     }
     
+    #gun-slide::before,
+    #gun-slide::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 30px; /* Wysokość "żeber" */
+      background: #444;
+      border-radius: 4px;
+      top: 5px;
+    }
+    #gun-slide::before {
+      left: 15px;
+      box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
+    }
+    #gun-slide::after {
+      right: 15px;
+      box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
+    }
+
     #gun-frame {
       position: absolute;
-      width: 200px; /* MODIFIED: Matched to gun-top width */
-      height: 40px;
+      width: 200px; 
+      height: 40px; /* Dopasowane do wysokości suwadła */
       background: #4a4a4a;
-      top: 30px;
+      top: 30px; /* Pozycja poniżej suwadła */
       left: 0;
       border-radius: 4px;
       z-index: 11;
     }
+
+    /* Lufa - teraz jest częścią ramy, więc nie ma osobnego elementu */
 
     #gun-grip {
         position: absolute;
         width: 40px;
         height: 90px;
         background: #4a4a4a;
-        top: 30px;
+        top: 30px; /* Początek rękojeści */
         left: 30px;
         transform: skewX(-10deg);
         border-radius: 4px;
@@ -96,7 +124,7 @@
         position: absolute;
         width: 30px;
         height: 35px;
-        top: 60px;
+        top: 60px; /* Pozycja spustu */
         left: 75px;
         border: 8px solid #4a4a4a;
         border-radius: 10px 10px 20px 20px;
@@ -106,12 +134,12 @@
     #gun-magazine-well {
         position: absolute;
         width: 32px;
-        height: 10px;
+        height: 60px; /* ZWIĘKSZONA WYSOKOŚĆ */
         background-color: #555;
         border: 2px solid #333;
         border-top: none;
         border-radius: 0 0 4px 4px;
-        bottom: 22px;
+        bottom: 22px; /* Pozycja na dole */
         left: 32px;
         transform: skewX(-10deg);
         visibility: hidden;
@@ -124,7 +152,7 @@
     #magazine {
       position: absolute;
       width: 35px;
-      height: 80px;
+      height: 120px; /* ZWIĘKSZONA WYSOKOŚĆ */
       background: #555;
       border: 3px solid #333;
       border-radius: 4px;
@@ -246,7 +274,7 @@
     <div id="gun-grip"></div>
     <div id="gun-trigger-guard"></div>
     <div id="gun-magazine-well"></div>
-    <div id="gun-top"></div>
+    <div id="gun-slide">Slide</div> 
   </div>
   <div id="magazine" title="Load ammo, then drag here">
     <div id="ammo-loaded-indicator">0 / 15</div>
@@ -265,7 +293,7 @@
   const scene = document.getElementById('scene');
   const coordsDisplay = document.getElementById('coords');
   const gun = document.getElementById('gun');
-  const gunTop = document.getElementById('gun-top');
+  const gunSlide = document.getElementById('gun-slide'); 
   const mag = document.getElementById('magazine');
   const gunMagWell = document.getElementById('gun-magazine-well');
   const overlay = document.getElementById('overlay');
@@ -302,8 +330,8 @@
   });
 
   // --- Gun Slide Interaction ---
-  let isDraggingGunTop = false;
-  let startGunTopX = 0;
+  let isDraggingGunSlide = false; 
+  let startGunSlideX = 0; 
   let shellEjected = false;
   const loadSound = new Audio('https://actions.google.com/sounds/v1/weapons/gun_cocking.ogg');
   loadSound.volume = 0.5;
@@ -313,36 +341,37 @@
     sound.play();
   }
 
-  gunTop.addEventListener('mousedown', (e) => {
+  gunSlide.addEventListener('mousedown', (e) => { 
     if (!magInserted || magazineLoaded) return;
     e.preventDefault();
-    isDraggingGunTop = true;
-    startGunTopX = e.clientX;
-    gunTop.style.cursor = 'grabbing';
+    isDraggingGunSlide = true; 
+    startGunSlideX = e.clientX; 
+    gunSlide.style.cursor = 'grabbing'; 
   });
 
   // --- Magazine Insertion ---
   function checkMagInserted() {
-    if (loadedAmmoCount === 0 || isDraggingMag === false) return false;
+    if (loadedAmmoCount === 0 || !isDraggingMag) return false; 
     const gunRect = gun.getBoundingClientRect();
     const magRect = mag.getBoundingClientRect();
-    const magWellLeft = gunRect.left + gun.offsetWidth * 0.15;
-    const magWellRight = gunRect.left + gun.offsetWidth * 0.45;
-    const magWellTop = gunRect.top + gun.offsetHeight * 0.5;
-    const magWellBottom = gunRect.bottom;
+    
+    const magWellCenterX = gunRect.left + gun.offsetWidth * 0.3;
+    const magWellCenterY = gunRect.top + gun.offsetHeight * 0.7;
+
     const magCenterX = magRect.left + magRect.width / 2;
     const magCenterY = magRect.top + magRect.height / 2;
 
-    if (magCenterX > magWellLeft && magCenterX < magWellRight && magCenterY > magWellTop && magCenterY < magWellBottom) {
-        isDraggingMag = false;
+    const tolerance = 20; 
+    if (Math.abs(magCenterX - magWellCenterX) < tolerance && Math.abs(magCenterY - magWellCenterY) < tolerance) {
+        isDraggingMag = false; 
         magInserted = true;
         mag.style.display = 'none';
         gunMagWell.style.visibility = 'visible';
         gunMagWell.style.opacity = '1';
         shellEjected = false;
         magazineLoaded = false;
-        gunTop.style.left = '0px';
-        gunTop.style.cursor = 'grab';
+        gunSlide.style.left = '0px'; 
+        gunSlide.style.cursor = 'grab'; 
         showNotification('Magazine inserted.');
         return true;
     }
@@ -364,18 +393,18 @@
     updateAmmoIndicator();
     const bullet = document.createElement('div');
     bullet.classList.add('bullet');
-    const gunTopRect = gunTop.getBoundingClientRect();
-    bullet.style.left = (gunTopRect.right - 10) + 'px';
-    bullet.style.top = (gunTopRect.top + (gunTopRect.height / 2) - 5) + 'px';
+    const gunSlideRect = gunSlide.getBoundingClientRect(); 
+    bullet.style.left = (gunSlideRect.right - 10) + 'px'; 
+    bullet.style.top = (gunSlideRect.top + (gunSlideRect.height / 2) - 5) + 'px'; 
     document.body.appendChild(bullet);
-    gunTop.style.boxShadow = '0 0 15px 6px #ff8c00';
-    setTimeout(() => gunTop.style.boxShadow = 'inset 0 -2px 4px rgba(0,0,0,0.4)', 100);
+    gunSlide.style.boxShadow = '0 0 15px 6px #ff8c00'; 
+    setTimeout(() => gunSlide.style.boxShadow = 'inset 0 -3px 6px rgba(0,0,0,0.5)', 100); 
     const startTime = performance.now();
     requestAnimationFrame(function animateBullet(currentTime) {
       const elapsed = currentTime - startTime;
       const progress = elapsed / 800;
       if (progress < 1) {
-        bullet.style.left = (gunTopRect.right - 10 + progress * 800) + 'px';
+        bullet.style.left = (gunSlideRect.right - 10 + progress * 800) + 'px'; 
         requestAnimationFrame(animateBullet);
       } else {
         bullet.remove();
@@ -401,8 +430,8 @@
     ammoCount = 0;
     loadedAmmoCount = 0;
     updateAmmoIndicator();
-    gunTop.style.left = '0px';
-    gunTop.style.cursor = 'default';
+    gunSlide.style.left = '0px'; 
+    gunSlide.style.cursor = 'default'; 
   }
 
   gun.addEventListener('click', shoot);
@@ -439,20 +468,43 @@
   let isDraggingGroup = false;
   let dragStart = { x: 0, y: 0 };
   
+  // =====================================================================
+  // === POCZĄTEK ZMIAN - NAPRAWIONA LOGIKA ZAZNACZANIA I PRZECIĄGANIA ===
+  // =====================================================================
   scene.addEventListener('mousedown', (e) => {
     if (e.target.classList.contains('ammo')) {
       const ammo = e.target;
-      if (!e.ctrlKey && !ammo.classList.contains('selected')) {
+      const isAlreadySelected = ammo.classList.contains('selected');
+
+      // --- Logika zaznaczania ---
+      // Jeśli NIE trzymamy Ctrl I klikamy na NIEZAZNACZONY element,
+      // to jest to nowe zaznaczenie. Czyścimy stare i zaznaczamy tylko ten.
+      if (!e.ctrlKey && !isAlreadySelected) {
         clearSelection();
+        ammo.classList.add('selected');
       }
-      ammo.classList.toggle('selected');
-      isDraggingGroup = true;
-      dragStart.x = e.clientX;
-      dragStart.y = e.clientY;
-      document.querySelectorAll('.ammo.selected').forEach(selectedAmmo => {
-        selectedAmmo._dragStartX = selectedAmmo.offsetLeft;
-        selectedAmmo._dragStartY = selectedAmmo.offsetTop;
-      });
+      // Jeśli trzymamy Ctrl, po prostu przełączamy stan klikniętego elementu.
+      else if (e.ctrlKey) {
+        ammo.classList.toggle('selected');
+      }
+      // W przeciwnym wypadku (kliknięcie na już zaznaczony element bez Ctrl),
+      // nie robimy nic z zaznaczeniem - zaraz rozpoczniemy przeciąganie całej grupy.
+
+      // --- Logika przeciągania ---
+      // Jeśli po aktualizacji zaznaczenia jakikolwiek element jest zaznaczony,
+      // rozpoczynamy przeciąganie.
+      if (document.querySelector('.ammo.selected')) {
+        isDraggingGroup = true;
+        dragStart.x = e.clientX;
+        dragStart.y = e.clientY;
+        
+        // Zapisujemy pozycję startową dla WSZYSTKICH aktualnie zaznaczonych elementów.
+        document.querySelectorAll('.ammo.selected').forEach(selectedAmmo => {
+          selectedAmmo._dragStartX = selectedAmmo.offsetLeft;
+          selectedAmmo._dragStartY = selectedAmmo.offsetTop;
+        });
+      }
+
     } else if (e.target === scene) {
       clearSelection();
       isPanning = true;
@@ -463,6 +515,10 @@
       startSceneTranslateY = sceneTranslateY;
     }
   });
+  // =====================================================================
+  // === KONIEC ZMIAN ===
+  // =====================================================================
+
 
   document.addEventListener('mousemove', (e) => {
     if (isDraggingGroup) {
@@ -492,17 +548,17 @@
       scene.style.transform = `translate(calc(-50% + ${sceneTranslateX}px), calc(-50% + ${sceneTranslateY}px))`;
       coordsDisplay.textContent = `X: ${-sceneTranslateX}, Y: ${-sceneTranslateY}`;
     }
-     if (isDraggingGunTop) {
-      let dx = e.clientX - startGunTopX;
-      let newLeft = parseFloat(gunTop.style.left) + dx;
-      const minLeft = 0, maxLeft = -60;
+     if (isDraggingGunSlide) { 
+      let dx = e.clientX - startGunSlideX; 
+      let newLeft = parseFloat(gunSlide.style.left) + dx; 
+      const minLeft = -10, maxLeft = -70; 
       newLeft = Math.max(maxLeft, Math.min(newLeft, minLeft));
-      gunTop.style.left = newLeft + 'px';
-      if (newLeft < -50 && !shellEjected) {
+      gunSlide.style.left = newLeft + 'px'; 
+      if (newLeft < -50 && !shellEjected) { 
         shellEjected = true;
         playSound(loadSound);
       }
-      startGunTopX = e.clientX;
+      startGunSlideX = e.clientX; 
     }
   });
 
@@ -553,17 +609,17 @@
       isPanning = false;
       scene.style.cursor = 'grab';
     }
-    if (isDraggingGunTop) {
-      isDraggingGunTop = false;
-      gunTop.style.cursor = 'grab';
-      if (shellEjected) {
+    if (isDraggingGunSlide) { 
+      isDraggingGunSlide = false; 
+      gunSlide.style.cursor = 'grab'; 
+      if (shellEjected) { 
         magazineLoaded = true;
         ammoCount = loadedAmmoCount;
         showNotification(`Weapon loaded with ${ammoCount} rounds.`);
       }
-      gunTop.style.transition = 'left 0.1s ease-out';
-      gunTop.style.left = '0px';
-      setTimeout(() => gunTop.style.transition = 'left 0.15s ease-in-out', 100);
+      gunSlide.style.transition = 'left 0.1s ease-out'; 
+      gunSlide.style.left = '0px'; 
+      setTimeout(() => gunSlide.style.transition = 'left 0.15s ease-in-out', 100);
     }
   });
   
@@ -591,7 +647,7 @@
     mag.style.left = magPos.x + 'px';
     mag.style.top = magPos.y + 'px';
     updateAmmoIndicator();
-    gunTop.style.cursor = 'default';
+    gunSlide.style.cursor = 'default'; 
   });
 </script>
 </body>
