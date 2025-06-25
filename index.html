@@ -47,8 +47,8 @@
 
     #gun {
       position: absolute;
-      width: 200px;
-      height: 180px; 
+      width: 270px; /* wydłużone z 200px */
+      height: 180px;
       left: calc(50% + 250px);
       top: 50%;
       transform: translate(-50%, -50%);
@@ -57,12 +57,12 @@
 
     #gun-slide {
       position: absolute;
-      width: 220px; 
-      height: 40px; 
+      width: 290px; /* wydłużone z 220px */
+      height: 40px;
       background: #303030;
       border-radius: 8px;
       top: 0;
-      left: -10px; 
+      left: -10px;
       border: 1px solid #222;
       box-shadow: inset 0 -3px 6px rgba(0,0,0,0.5);
       cursor: grab;
@@ -98,10 +98,10 @@
 
     #gun-frame {
       position: absolute;
-      width: 200px; 
-      height: 40px; 
+      width: 270px; /* wydłużone z 200px */
+      height: 40px;
       background: #4a4a4a;
-      top: 30px; 
+      top: 30px;
       left: 0;
       border-radius: 4px;
       z-index: 11;
@@ -128,24 +128,6 @@
         border-radius: 10px 10px 20px 20px;
         border-top: none;
     }
-
-    #gun-magazine-well {
-        position: absolute;
-        width: 32px;
-        height: 60px; 
-        background-color: #555;
-        border: 2px solid #333;
-        border-top: none;
-        border-radius: 0 0 4px 4px;
-        bottom: 22px; 
-        left: 32px;
-        transform: skewX(-10deg);
-        visibility: hidden;
-        opacity: 0;
-        transition: opacity 0.2s;
-        z-index: 13;
-    }
-
 
     #magazine {
       position: absolute;
@@ -271,7 +253,6 @@
     <div id="gun-frame"></div>
     <div id="gun-grip"></div>
     <div id="gun-trigger-guard"></div>
-    <div id="gun-magazine-well"></div>
     <div id="gun-slide">Slide</div> 
   </div>
   <div id="magazine" title="Load ammo, then drop on the gun">
@@ -293,7 +274,6 @@
   const gun = document.getElementById('gun');
   const gunSlide = document.getElementById('gun-slide'); 
   const magazine = document.getElementById('magazine');
-  const gunMagWell = document.getElementById('gun-magazine-well');
   const overlay = document.getElementById('overlay');
   const playBtn = document.getElementById('playBtn');
   const notification = document.getElementById('notification');
@@ -399,20 +379,15 @@
   
   function checkMagInserted() {
     if (loadedAmmoCount === 0) return false; 
-    
     const gunRect = gun.getBoundingClientRect();
     const magRect = magazine.getBoundingClientRect();
-    
     const overlaps = !(magRect.right < gunRect.left || 
                        magRect.left > gunRect.right || 
                        magRect.bottom < gunRect.top || 
                        magRect.top > gunRect.bottom);
-
     if (overlaps) {
         magInserted = true;
         magazine.style.display = 'none';
-        gunMagWell.style.visibility = 'visible';
-        gunMagWell.style.opacity = '1';
         shellEjected = false;
         magazineLoaded = false;
         gunSlide.style.left = '-10px'; 
@@ -425,8 +400,6 @@
 
   function ejectMagazine() {
     magazine.style.display = 'block';
-    gunMagWell.style.visibility = 'hidden';
-    gunMagWell.style.opacity = '0';
     magPos.x = magInitialPos.x;
     magPos.y = magInitialPos.y;
     magazine.style.left = magPos.x + 'px';
