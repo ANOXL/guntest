@@ -26,7 +26,7 @@
       cursor: grab;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%) scale(1);
       transition: transform 0.1s ease-out;
     }
 
@@ -48,7 +48,7 @@
     #gun {
       position: absolute;
       width: 200px;
-      height: 180px; /* ZWIĘKSZONE WYSOKOŚĆ RAMY */
+      height: 180px; 
       left: calc(50% + 250px);
       top: 50%;
       transform: translate(-50%, -50%);
@@ -58,7 +58,7 @@
     #gun-slide {
       position: absolute;
       width: 220px; 
-      height: 40px; /* Standardowa wysokość suwadła */
+      height: 40px; 
       background: #303030;
       border-radius: 8px;
       top: 0;
@@ -82,7 +82,7 @@
       content: '';
       position: absolute;
       width: 8px;
-      height: 30px; /* Wysokość "żeber" */
+      height: 30px; 
       background: #444;
       border-radius: 4px;
       top: 5px;
@@ -99,22 +99,20 @@
     #gun-frame {
       position: absolute;
       width: 200px; 
-      height: 40px; /* Dopasowane do wysokości suwadła */
+      height: 40px; 
       background: #4a4a4a;
-      top: 30px; /* Pozycja poniżej suwadła */
+      top: 30px; 
       left: 0;
       border-radius: 4px;
       z-index: 11;
     }
-
-    /* Lufa - teraz jest częścią ramy, więc nie ma osobnego elementu */
 
     #gun-grip {
         position: absolute;
         width: 40px;
         height: 90px;
         background: #4a4a4a;
-        top: 30px; /* Początek rękojeści */
+        top: 30px; 
         left: 30px;
         transform: skewX(-10deg);
         border-radius: 4px;
@@ -124,7 +122,7 @@
         position: absolute;
         width: 30px;
         height: 35px;
-        top: 60px; /* Pozycja spustu */
+        top: 60px; 
         left: 75px;
         border: 8px solid #4a4a4a;
         border-radius: 10px 10px 20px 20px;
@@ -134,12 +132,12 @@
     #gun-magazine-well {
         position: absolute;
         width: 32px;
-        height: 60px; /* ZWIĘKSZONA WYSOKOŚĆ */
+        height: 60px; 
         background-color: #555;
         border: 2px solid #333;
         border-top: none;
         border-radius: 0 0 4px 4px;
-        bottom: 22px; /* Pozycja na dole */
+        bottom: 22px; 
         left: 32px;
         transform: skewX(-10deg);
         visibility: hidden;
@@ -152,7 +150,7 @@
     #magazine {
       position: absolute;
       width: 35px;
-      height: 120px; /* ZWIĘKSZONA WYSOKOŚĆ */
+      height: 120px; 
       background: #555;
       border: 3px solid #333;
       border-radius: 4px;
@@ -276,7 +274,7 @@
     <div id="gun-magazine-well"></div>
     <div id="gun-slide">Slide</div> 
   </div>
-  <div id="magazine" title="Load ammo, then drag here">
+  <div id="magazine" title="Load ammo, then drop on the gun">
     <div id="ammo-loaded-indicator">0 / 15</div>
   </div>
 </div>
@@ -294,18 +292,31 @@
   const coordsDisplay = document.getElementById('coords');
   const gun = document.getElementById('gun');
   const gunSlide = document.getElementById('gun-slide'); 
-  const mag = document.getElementById('magazine');
+  const magazine = document.getElementById('magazine');
   const gunMagWell = document.getElementById('gun-magazine-well');
   const overlay = document.getElementById('overlay');
   const playBtn = document.getElementById('playBtn');
   const notification = document.getElementById('notification');
   const ammoLoadedIndicator = document.getElementById('ammo-loaded-indicator');
   
-  // --- Scene & Movement ---
-  let sceneTranslateX = 0, sceneTranslateY = 0;
+  // --- Scene & Camera Controls ---
+  let sceneTranslateX = 0, sceneTranslateY = 0, sceneScale = 1;
   let isPanning = false;
   let panStartX, panStartY, startSceneTranslateX, startSceneTranslateY;
   
+  const updateSceneTransform = () => {
+      scene.style.transform = `translate(calc(-50% + ${sceneTranslateX}px), calc(-50% + ${sceneTranslateY}px)) scale(${sceneScale})`;
+      coordsDisplay.textContent = `X: ${Math.round(-sceneTranslateX)}, Y: ${Math.round(-sceneTranslateY)}`;
+  }
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    const zoomSpeed = 0.1;
+    const zoomAmount = e.deltaY < 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
+    sceneScale = Math.min(Math.max(0.3, sceneScale * zoomAmount), 2.5);
+    updateSceneTransform();
+  });
+
   window.addEventListener('keydown', (e) => {
     const moveSpeed = 20;
     if (e.ctrlKey && e.key.toLowerCase() === 'a') {
@@ -321,15 +332,14 @@
             case 'a': sceneTranslateX += moveSpeed; break;
             case 'd': sceneTranslateX -= moveSpeed; break;
         }
-        scene.style.transform = `translate(calc(-50% + ${sceneTranslateX}px), calc(-50% + ${sceneTranslateY}px))`;
-        coordsDisplay.textContent = `X: ${-sceneTranslateX}, Y: ${-sceneTranslateY}`;
+        updateSceneTransform();
     }
     if (e.key === 'Escape') {
       location.reload();
     }
   });
 
-  // --- Gun Slide Interaction ---
+  // --- Gun & Interaction ---
   let isDraggingGunSlide = false; 
   let startGunSlideX = 0; 
   let shellEjected = false;
@@ -349,36 +359,6 @@
     gunSlide.style.cursor = 'grabbing'; 
   });
 
-  // --- Magazine Insertion ---
-  function checkMagInserted() {
-    if (loadedAmmoCount === 0 || !isDraggingMag) return false; 
-    const gunRect = gun.getBoundingClientRect();
-    const magRect = mag.getBoundingClientRect();
-    
-    const magWellCenterX = gunRect.left + gun.offsetWidth * 0.3;
-    const magWellCenterY = gunRect.top + gun.offsetHeight * 0.7;
-
-    const magCenterX = magRect.left + magRect.width / 2;
-    const magCenterY = magRect.top + magRect.height / 2;
-
-    const tolerance = 20; 
-    if (Math.abs(magCenterX - magWellCenterX) < tolerance && Math.abs(magCenterY - magWellCenterY) < tolerance) {
-        isDraggingMag = false; 
-        magInserted = true;
-        mag.style.display = 'none';
-        gunMagWell.style.visibility = 'visible';
-        gunMagWell.style.opacity = '1';
-        shellEjected = false;
-        magazineLoaded = false;
-        gunSlide.style.left = '0px'; 
-        gunSlide.style.cursor = 'grab'; 
-        showNotification('Magazine inserted.');
-        return true;
-    }
-    return false;
-  }
-
-  // --- Shooting ---
   function shoot() {
     if (!magazineLoaded) {
       showNotification('Cock the slide to chamber a round!');
@@ -404,39 +384,67 @@
       const elapsed = currentTime - startTime;
       const progress = elapsed / 800;
       if (progress < 1) {
-        bullet.style.left = (gunSlideRect.right - 10 + progress * 800) + 'px'; 
+        bullet.style.left = (gunSlideRect.right - 10 + progress * (800 / sceneScale)) + 'px'; 
         requestAnimationFrame(animateBullet);
       } else {
         bullet.remove();
       }
     });
   }
+
+  gun.addEventListener('click', shoot);
+
+  // --- Magazine & Ammo Logic ---
+  let isDraggingMag = false, startMagDragX, startMagDragY, magPos = { x: 0, y: 0 }, magInitialPos = { x: 0, y: 0 };
   
-  function updateAmmoIndicator() {
-    ammoLoadedIndicator.textContent = `${loadedAmmoCount} / ${maxAmmo}`;
+  function checkMagInserted() {
+    if (loadedAmmoCount === 0) return false; 
+    
+    const gunRect = gun.getBoundingClientRect();
+    const magRect = magazine.getBoundingClientRect();
+    
+    const overlaps = !(magRect.right < gunRect.left || 
+                       magRect.left > gunRect.right || 
+                       magRect.bottom < gunRect.top || 
+                       magRect.top > gunRect.bottom);
+
+    if (overlaps) {
+        magInserted = true;
+        magazine.style.display = 'none';
+        gunMagWell.style.visibility = 'visible';
+        gunMagWell.style.opacity = '1';
+        shellEjected = false;
+        magazineLoaded = false;
+        gunSlide.style.left = '-10px'; 
+        gunSlide.style.cursor = 'grab'; 
+        showNotification('Magazine inserted.');
+        return true;
+    }
+    return false;
   }
 
   function ejectMagazine() {
-    mag.style.display = 'block';
+    magazine.style.display = 'block';
     gunMagWell.style.visibility = 'hidden';
     gunMagWell.style.opacity = '0';
     magPos.x = magInitialPos.x;
     magPos.y = magInitialPos.y;
-    mag.style.left = magPos.x + 'px';
-    mag.style.top = magPos.y + 'px';
-    mag.style.borderColor = '#333';
+    magazine.style.left = magPos.x + 'px';
+    magazine.style.top = magPos.y + 'px';
+    magazine.style.borderColor = '#333';
     magInserted = false;
     magazineLoaded = false;
     ammoCount = 0;
     loadedAmmoCount = 0;
     updateAmmoIndicator();
-    gunSlide.style.left = '0px'; 
+    gunSlide.style.left = '-10px'; 
     gunSlide.style.cursor = 'default'; 
   }
 
-  gun.addEventListener('click', shoot);
+  function updateAmmoIndicator() {
+    ammoLoadedIndicator.textContent = `${loadedAmmoCount} / ${maxAmmo}`;
+  }
 
-  // --- Ammo Creation ---
   function createAmmo() {
     const initialAmmoX = 600; 
     const initialAmmoY = 950;
@@ -452,59 +460,39 @@
     }
   }
 
-  // --- Magazine Dragging ---
-  let isDraggingMag = false, startExMag, startEyMag, magPos = { x: 0, y: 0 }, magInitialPos = { x: 0, y: 0 };
-  mag.addEventListener('mousedown', (e) => {
+  magazine.addEventListener('mousedown', (e) => {
     if (magInserted) return;
     e.preventDefault();
     isDraggingMag = true;
-    mag.style.cursor = 'grabbing';
-    mag.style.transition = 'none';
-    startExMag = e.clientX;
-    startEyMag = e.clientY;
+    magazine.style.cursor = 'grabbing';
+    magazine.style.transition = 'none';
+    startMagDragX = e.clientX;
+    startMagDragY = e.clientY;
   });
-  
-  // --- Global Drag & Drop Logic ---
+
+  // --- Global Drag & Drop ---
   let isDraggingGroup = false;
-  let dragStart = { x: 0, y: 0 };
+  let groupDragStart = { x: 0, y: 0 };
   
-  // =====================================================================
-  // === POCZĄTEK ZMIAN - NAPRAWIONA LOGIKA ZAZNACZANIA I PRZECIĄGANIA ===
-  // =====================================================================
   scene.addEventListener('mousedown', (e) => {
     if (e.target.classList.contains('ammo')) {
       const ammo = e.target;
       const isAlreadySelected = ammo.classList.contains('selected');
-
-      // --- Logika zaznaczania ---
-      // Jeśli NIE trzymamy Ctrl I klikamy na NIEZAZNACZONY element,
-      // to jest to nowe zaznaczenie. Czyścimy stare i zaznaczamy tylko ten.
       if (!e.ctrlKey && !isAlreadySelected) {
         clearSelection();
         ammo.classList.add('selected');
-      }
-      // Jeśli trzymamy Ctrl, po prostu przełączamy stan klikniętego elementu.
-      else if (e.ctrlKey) {
+      } else if (e.ctrlKey) {
         ammo.classList.toggle('selected');
       }
-      // W przeciwnym wypadku (kliknięcie na już zaznaczony element bez Ctrl),
-      // nie robimy nic z zaznaczeniem - zaraz rozpoczniemy przeciąganie całej grupy.
-
-      // --- Logika przeciągania ---
-      // Jeśli po aktualizacji zaznaczenia jakikolwiek element jest zaznaczony,
-      // rozpoczynamy przeciąganie.
       if (document.querySelector('.ammo.selected')) {
         isDraggingGroup = true;
-        dragStart.x = e.clientX;
-        dragStart.y = e.clientY;
-        
-        // Zapisujemy pozycję startową dla WSZYSTKICH aktualnie zaznaczonych elementów.
+        groupDragStart.x = e.clientX;
+        groupDragStart.y = e.clientY;
         document.querySelectorAll('.ammo.selected').forEach(selectedAmmo => {
           selectedAmmo._dragStartX = selectedAmmo.offsetLeft;
           selectedAmmo._dragStartY = selectedAmmo.offsetTop;
         });
       }
-
     } else if (e.target === scene) {
       clearSelection();
       isPanning = true;
@@ -515,46 +503,40 @@
       startSceneTranslateY = sceneTranslateY;
     }
   });
-  // =====================================================================
-  // === KONIEC ZMIAN ===
-  // =====================================================================
-
 
   document.addEventListener('mousemove', (e) => {
     if (isDraggingGroup) {
-      let total_dx = e.clientX - dragStart.x;
-      let total_dy = e.clientY - dragStart.y;
+      let dx = (e.clientX - groupDragStart.x) / sceneScale;
+      let dy = (e.clientY - groupDragStart.y) / sceneScale;
       document.querySelectorAll('.ammo.selected').forEach(ammo => {
-        ammo.style.left = (ammo._dragStartX + total_dx) + 'px';
-        ammo.style.top = (ammo._dragStartY + total_dy) + 'px';
+        ammo.style.left = (ammo._dragStartX + dx) + 'px';
+        ammo.style.top = (ammo._dragStartY + dy) + 'px';
       });
     }
     if (isDraggingMag) {
-      let dx = e.clientX - startExMag;
-      let dy = e.clientY - startEyMag;
+      let dx = (e.clientX - startMagDragX) / sceneScale;
+      let dy = (e.clientY - startMagDragY) / sceneScale;
       magPos.x += dx;
       magPos.y += dy;
-      mag.style.left = magPos.x + 'px';
-      mag.style.top = magPos.y + 'px';
-      startExMag = e.clientX;
-      startEyMag = e.clientY;
-      checkMagInserted();
+      magazine.style.left = magPos.x + 'px';
+      magazine.style.top = magPos.y + 'px';
+      startMagDragX = e.clientX;
+      startMagDragY = e.clientY;
     }
     if (isPanning) {
       const dx = e.clientX - panStartX;
       const dy = e.clientY - panStartY;
       sceneTranslateX = startSceneTranslateX + dx;
       sceneTranslateY = startSceneTranslateY + dy;
-      scene.style.transform = `translate(calc(-50% + ${sceneTranslateX}px), calc(-50% + ${sceneTranslateY}px))`;
-      coordsDisplay.textContent = `X: ${-sceneTranslateX}, Y: ${-sceneTranslateY}`;
+      updateSceneTransform();
     }
      if (isDraggingGunSlide) { 
-      let dx = e.clientX - startGunSlideX; 
-      let newLeft = parseFloat(gunSlide.style.left) + dx; 
+      let dx = (e.clientX - startGunSlideX) / sceneScale;
+      let newLeft = parseFloat(gunSlide.style.left || -10) + dx;
       const minLeft = -10, maxLeft = -70; 
       newLeft = Math.max(maxLeft, Math.min(newLeft, minLeft));
       gunSlide.style.left = newLeft + 'px'; 
-      if (newLeft < -50 && !shellEjected) { 
+      if (newLeft < -60 && !shellEjected) { 
         shellEjected = true;
         playSound(loadSound);
       }
@@ -565,13 +547,13 @@
   document.addEventListener('mouseup', () => {
     if (isDraggingGroup) {
       isDraggingGroup = false;
-      const magRect = mag.getBoundingClientRect();
+      const magRect = magazine.getBoundingClientRect();
       let loadedThisDrop = 0;
       const selectedAmmoElements = document.querySelectorAll('.ammo.selected');
       let isAnyAmmoOverMag = false;
       for (const ammo of selectedAmmoElements) {
         const ammoRect = ammo.getBoundingClientRect();
-        if (ammoRect.right > magRect.left && ammoRect.left < magRect.right && ammoRect.bottom > magRect.top && ammoRect.top < magRect.bottom) {
+        if (!(ammoRect.right < magRect.left || ammoRect.left > magRect.right || ammoRect.bottom < magRect.top || ammoRect.top > magRect.bottom)) {
           isAnyAmmoOverMag = true;
           break;
         }
@@ -589,20 +571,21 @@
       }
       if (loadedThisDrop > 0) {
         updateAmmoIndicator();
-        mag.style.borderColor = '#ffeb3b';
+        magazine.style.borderColor = '#ffeb3b';
         showNotification(`Loaded ${loadedThisDrop} rounds.`);
       }
       clearSelection();
     }
     if (isDraggingMag) {
       isDraggingMag = false;
-      mag.style.cursor = 'grab';
-      if (!magInserted) {
-        mag.style.transition = 'left 0.3s, top 0.3s';
+      magazine.style.cursor = 'grab';
+      const wasInserted = checkMagInserted();
+      if (!wasInserted && !magInserted) {
+        magazine.style.transition = 'left 0.3s, top 0.3s';
         magPos.x = magInitialPos.x;
         magPos.y = magInitialPos.y;
-        mag.style.left = magPos.x + 'px';
-        mag.style.top = magPos.y + 'px';
+        magazine.style.left = magPos.x + 'px';
+        magazine.style.top = magPos.y + 'px';
       }
     }
     if (isPanning) {
@@ -618,7 +601,7 @@
         showNotification(`Weapon loaded with ${ammoCount} rounds.`);
       }
       gunSlide.style.transition = 'left 0.1s ease-out'; 
-      gunSlide.style.left = '0px'; 
+      gunSlide.style.left = '-10px'; 
       setTimeout(() => gunSlide.style.transition = 'left 0.15s ease-in-out', 100);
     }
   });
@@ -639,13 +622,13 @@
   playBtn.addEventListener('click', () => {
     overlay.style.display = 'none';
     createAmmo();
-    magInitialPos.x = mag.offsetLeft;
-    magInitialPos.y = mag.offsetTop;
+    magInitialPos.x = magazine.offsetLeft;
+    magInitialPos.y = magazine.offsetTop;
     magPos.x = magInitialPos.x;
     magPos.y = magInitialPos.y;
-    mag.style.transform = 'translate(-50%, -50%)';
-    mag.style.left = magPos.x + 'px';
-    mag.style.top = magPos.y + 'px';
+    magazine.style.transform = 'translate(-50%, -50%)';
+    magazine.style.left = magPos.x + 'px';
+    magazine.style.top = magPos.y + 'px';
     updateAmmoIndicator();
     gunSlide.style.cursor = 'default'; 
   });
