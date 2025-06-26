@@ -52,7 +52,6 @@
       left: 1100px;
       top: 915px;
       z-index: 10;
-      /* ZMIANA: Kursor dla całego pistoletu */
       cursor: grab;
     }
 
@@ -204,6 +203,126 @@
     .button:hover { background-color: #0b7dda; transform: translateY(-2px); }
     #ammo-loaded-indicator { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); font-size: 14px; color: #ffeb3b; background: rgba(0,0,0,0.5); padding: 2px 5px; border-radius: 3px; }
     #notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background-color: rgba(30,30,30,0.9); color: white; padding: 12px 25px; border-radius: 8px; border: 1px solid #61dafb; z-index: 3000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease-in-out; font-size: 16px; }
+    
+    #achievements-btn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      color: #61dafb;
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      border: 1px solid #61dafb;
+      cursor: pointer;
+      z-index: 1000;
+      transition: background-color 0.2s, transform 0.2s;
+    }
+    #achievements-btn:hover {
+      background: rgba(97, 218, 251, 0.2);
+      transform: translateY(-2px);
+    }
+    #achievements-gui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(20, 20, 20, 0.85);
+      backdrop-filter: blur(5px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2500;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    #achievements-container {
+        background: #282c34;
+        padding: 30px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+        border: 1px solid #61dafb;
+        box-shadow: 0 0 20px rgba(97, 218, 251, 0.3);
+        position: relative;
+    }
+    #achievements-container h2 {
+        text-align: center;
+        margin-top: 0;
+        color: #61dafb;
+        font-family: 'Arial Black', sans-serif;
+    }
+    #close-achievements-btn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .achievement-item {
+        background: #343a40;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border-left: 5px solid #61dafb;
+        transition: border-color 0.3s;
+    }
+    .achievement-item.unlocked {
+        border-left-color: #ffc107;
+    }
+    .achievement-title {
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 5px;
+    }
+    .achievement-item.unlocked .achievement-title::after {
+        content: ' ✔';
+        color: #ffc107;
+    }
+    .achievement-desc {
+        font-size: 14px;
+        color: #ccc;
+        margin-bottom: 10px;
+    }
+    .progress-bar-container {
+        width: 100%;
+        background-color: #282c34;
+        border-radius: 5px;
+        height: 20px;
+        overflow: hidden;
+        position: relative;
+    }
+    .progress-bar {
+        width: 0%;
+        height: 100%;
+        background-color: #2196f3;
+        border-radius: 5px;
+        transition: width 0.5s ease-out;
+    }
+    .achievement-item.unlocked .progress-bar {
+        background-color: #ffc107;
+    }
+    .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 12px;
+        font-weight: bold;
+        color: white;
+        text-shadow: 1px 1px 2px black;
+    }
+
   </style>
 </head>
 <body>
@@ -236,6 +355,17 @@
   </div>
 </div>
 
+<button id="achievements-btn">Achievements</button>
+
+<div id="achievements-gui">
+    <div id="achievements-container">
+        <button id="close-achievements-btn">×</button>
+        <h2>Achievements</h2>
+        <div id="achievements-list"></div>
+    </div>
+</div>
+
+
 <script>
   // --- Game State ---
   let magInserted = false;
@@ -258,8 +388,111 @@
   const gunTrigger = document.getElementById('gun-trigger');
   const gunFrame = document.getElementById('gun-frame');
   const ejectionPort = document.getElementById('ejection-port');
+  const achievementsBtn = document.getElementById('achievements-btn');
+  const achievementsGui = document.getElementById('achievements-gui');
+  const closeAchievementsBtn = document.getElementById('close-achievements-btn');
+  const achievementsList = document.getElementById('achievements-list');
+
+  // --- Achievements ---
+  let achievements = {
+    'shoot_100': {
+      title: 'Trigger Happy',
+      description: 'Shoot 100 times.',
+      target: 100,
+      current: 0,
+      unlocked: false,
+    },
+    'load_150': {
+      title: 'Quartermaster',
+      description: 'Load 150 rounds into magazines.',
+      target: 150,
+      current: 0,
+      unlocked: false,
+    },
+    'eject_10_mags': {
+      title: 'Butterfingers',
+      description: 'Eject 10 full or empty magazines.',
+      target: 10,
+      current: 0,
+      unlocked: false
+    },
+    'catch_mid_air': {
+      // *** ZMIANA NAZWY OSIĄGNIĘCIA ***
+      title: 'Catch mid air',
+      description: 'Catch a shell casing while it is still in the air.',
+      target: 1,
+      current: 0,
+      unlocked: false,
+      secret: true
+    }
+  };
+
+  function saveAchievements() {
+    localStorage.setItem('gunGameAchievements', JSON.stringify(achievements));
+  }
+
+  function loadAchievements() {
+    const saved = localStorage.getItem('gunGameAchievements');
+    if (saved) {
+      const savedAchievements = JSON.parse(saved);
+      for (const id in achievements) {
+        if (savedAchievements[id]) {
+          achievements[id].current = savedAchievements[id].current;
+          achievements[id].unlocked = savedAchievements[id].unlocked;
+        }
+      }
+    }
+  }
+
+  function updateAchievementProgress(id, amount) {
+    const ach = achievements[id];
+    if (!ach || ach.unlocked) return;
+    ach.current += amount;
+    if (ach.current >= ach.target) {
+      ach.current = ach.target;
+      ach.unlocked = true;
+      showNotification(`🏆 Achievement Unlocked: ${ach.title}`, 4000);
+    }
+    saveAchievements();
+  }
+
+  function renderAchievements() {
+    achievementsList.innerHTML = '';
+    for (const id in achievements) {
+      const ach = achievements[id];
+      if (!ach.secret || ach.unlocked) {
+        const progressPercent = (ach.current / ach.target) * 100;
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'achievement-item';
+        if (ach.unlocked) {
+          itemDiv.classList.add('unlocked');
+        }
+        itemDiv.innerHTML = `
+          <div class="achievement-title">${ach.title}</div>
+          <div class="achievement-desc">${ach.description}</div>
+          <div class="progress-bar-container">
+              <div class="progress-bar" style="width: ${progressPercent}%"></div>
+              <span class="progress-text">${ach.current} / ${ach.target}</span>
+          </div>
+        `;
+        achievementsList.appendChild(itemDiv);
+      }
+    }
+  }
+
+  achievementsBtn.addEventListener('click', () => {
+    renderAchievements();
+    achievementsGui.style.display = 'flex';
+  });
+  closeAchievementsBtn.addEventListener('click', () => {
+    achievementsGui.style.display = 'none';
+  });
+  achievementsGui.addEventListener('click', (e) => {
+    if (e.target === achievementsGui) {
+        achievementsGui.style.display = 'none';
+    }
+  });
   
-  // --- Scene & Camera Controls ---
   let sceneTranslateX = 0, sceneTranslateY = 0, sceneScale = 1;
   let isPanning = false;
   let panStartX, panStartY, startSceneTranslateX, startSceneTranslateY;
@@ -298,13 +531,11 @@
     }
     if (e.key === 'Escape') {
       clearSelection();
+      achievementsGui.style.display = 'none';
     }
   });
 
-  // --- Gun & Interaction ---
-  let isDraggingGunSlide = false; 
-  let startGunSlideX = 0; 
-  let shellEjected = false;
+  let isDraggingGunSlide = false, startGunSlideX = 0, shellEjected = false;
   const loadSound = new Audio('https://actions.google.com/sounds/v1/weapons/gun_cocking.ogg');
   loadSound.volume = 0.5;
   const casingSound = new Audio('https://actions.google.com/sounds/v1/coins/coin_drop.ogg');
@@ -319,158 +550,81 @@
   const THROW_VELOCITY_MULTIPLIER = 5;
 
   function applyPhysicsToItem(item, initialVelocityX = 0, initialVelocityY = 0) {
-    item.classList.add('in-air');
-    item.classList.add('interactive-item');
+    item.classList.add('in-air', 'interactive-item');
     item.classList.remove('selected', 'grabbing');
-    
     if (item._animationId) cancelAnimationFrame(item._animationId);
-
-    const floorY = 1992;
-    const ceilingY = 0;
-    const leftWallX = 0;
-    const rightWallX = 1985;
-
-    const bounciness = 0.6;
-    const friction = 0.95;
-    const gravity = 0.3;
-    
-    let pos = { x: item.offsetLeft, y: item.offsetTop };
-    let velocityX = initialVelocityX;
-    let velocityY = initialVelocityY;
-    let rotation = parseFloat(item.style.transform.replace(/[^0-9-.]/g, '')) || 0;
-    let rotationSpeed = (Math.random() - 0.5) * 20 + (velocityX * 0.5);
-
+    const floorY = 1992, ceilingY = 0, leftWallX = 0, rightWallX = 1985;
+    const bounciness = 0.6, friction = 0.95, gravity = 0.3;
+    let pos = { x: item.offsetLeft, y: item.offsetTop }, velocityX = initialVelocityX, velocityY = initialVelocityY;
+    let rotation = parseFloat(item.style.transform.replace(/[^0-9-.]/g, '')) || 0, rotationSpeed = (Math.random() - 0.5) * 20 + (velocityX * 0.5);
     function animate() {
-      velocityY += gravity;
-      pos.x += velocityX;
-      pos.y += velocityY;
-      rotation += rotationSpeed;
-
+      velocityY += gravity; pos.x += velocityX; pos.y += velocityY; rotation += rotationSpeed;
       if (pos.y >= floorY) {
-          pos.y = floorY;
-          velocityY *= -bounciness;
-          velocityX *= friction;
-          rotationSpeed *= 0.5;
-
+          pos.y = floorY; velocityY *= -bounciness; velocityX *= friction; rotationSpeed *= 0.5;
           if (Math.abs(velocityY) < 1 && Math.abs(velocityX) < 0.1) {
-              item.style.top = `${floorY}px`;
-              item.style.transform = `rotate(${rotation}deg)`;
-              item.classList.remove('in-air');
-              cancelAnimationFrame(item._animationId);
-              delete item._animationId;
-              return;
+              item.style.top = `${floorY}px`; item.style.transform = `rotate(${rotation}deg)`;
+              item.classList.remove('in-air'); cancelAnimationFrame(item._animationId); delete item._animationId; return;
           }
       }
-
       if (pos.y <= ceilingY) { pos.y = ceilingY; velocityY *= -bounciness; }
       if (pos.x >= rightWallX) { pos.x = rightWallX; velocityX *= -bounciness; }
       if (pos.x <= leftWallX) { pos.x = leftWallX; velocityX *= -bounciness; }
-      
-      item.style.transform = `rotate(${rotation}deg)`;
-      item.style.left = `${pos.x}px`;
-      item.style.top = `${pos.y}px`;
-
+      item.style.transform = `rotate(${rotation}deg)`; item.style.left = `${pos.x}px`; item.style.top = `${pos.y}px`;
       item._animationId = requestAnimationFrame(animate);
     }
     item._animationId = requestAnimationFrame(animate);
   }
 
   function ejectCasing(startPos) {
-    const casing = document.createElement('div');
-    casing.className = 'casing interactive-item';
-    casing.style.left = startPos.x + 'px';
-    casing.style.top = startPos.y + 'px';
-    scene.appendChild(casing);
-    playSound(casingSound);
-    
-    const initialVx = (Math.random() - 0.5) * 10;
-    const initialVy = -(Math.random() * 5 + 10);
+    const casing = document.createElement('div'); casing.className = 'casing interactive-item';
+    casing.style.left = startPos.x + 'px'; casing.style.top = startPos.y + 'px';
+    scene.appendChild(casing); playSound(casingSound);
+    const initialVx = (Math.random() - 0.5) * 10, initialVy = -(Math.random() * 5 + 10);
     applyPhysicsToItem(casing, initialVx, initialVy);
   }
 
   gunSlide.addEventListener('mousedown', (e) => { 
     if (!magInserted || magazineLoaded) return;
-    e.preventDefault();
-    e.stopPropagation();
-    isDraggingGunSlide = true; 
-    startGunSlideX = e.clientX; 
-    gunSlide.style.cursor = 'grabbing'; 
+    e.preventDefault(); e.stopPropagation(); isDraggingGunSlide = true; 
+    startGunSlideX = e.clientX; gunSlide.style.cursor = 'grabbing'; 
   });
 
   function shoot() {
-    if (!magInserted) {
-      showNotification('Insert a magazine first!');
-      return;
-    }
-    if (!magazineLoaded) {
-      showNotification('Cock the slide to chamber a round!');
-      return;
-    }
-    if (ammoCount <= 0) {
-      showNotification('Out of ammo! Ejecting empty magazine.');
-      ejectMagazine();
-      return;
-    }
-    
-    const sceneRect = scene.getBoundingClientRect();
-    const ejectionPortRect = ejectionPort.getBoundingClientRect();
+    if (!magInserted) { showNotification('Insert a magazine first!'); return; }
+    if (!magazineLoaded) { showNotification('Cock the slide to chamber a round!'); return; }
+    if (ammoCount <= 0) { showNotification('Out of ammo! Ejecting empty magazine.'); ejectMagazine(); return; }
+    const sceneRect = scene.getBoundingClientRect(), ejectionPortRect = ejectionPort.getBoundingClientRect();
     const casingStartX = (ejectionPortRect.left - sceneRect.left) / sceneScale + (ejectionPortRect.width / 2 / sceneScale);
     const casingStartY = (ejectionPortRect.top - sceneRect.top) / sceneScale + (ejectionPortRect.height / 2 / sceneScale);
     ejectCasing({ x: casingStartX, y: casingStartY });
-    
-    ammoCount--;
-    updateAmmoIndicator();
-    
-    const bullet = document.createElement('div');
-    bullet.classList.add('bullet');
+    ammoCount--; updateAmmoIndicator(); updateAchievementProgress('shoot_100', 1);
+    const bullet = document.createElement('div'); bullet.classList.add('bullet');
     const gunSlideRect = gunSlide.getBoundingClientRect();
-    bullet.style.left = (gunSlideRect.right - 10) + 'px'; 
-    bullet.style.top = (gunSlideRect.top + (gunSlideRect.height / 2) - 5) + 'px'; 
+    bullet.style.left = (gunSlideRect.right - 10) + 'px'; bullet.style.top = (gunSlideRect.top + (gunSlideRect.height / 2) - 5) + 'px'; 
     document.body.appendChild(bullet);
-    
     gunSlide.style.boxShadow = '0 0 15px 6px #ff8c00'; 
     setTimeout(() => gunSlide.style.boxShadow = 'inset 0 2px 2px rgba(255,255,255,0.05), inset 0 -2px 3px rgba(0,0,0,0.4)', 100); 
-    
     const startTime = performance.now();
     requestAnimationFrame(function animateBullet(currentTime) {
-      const elapsed = currentTime - startTime;
-      const progress = elapsed / 800;
-      if (progress < 1) {
-        bullet.style.left = (gunSlideRect.right - 10 + progress * (800 / sceneScale)) + 'px'; 
-        requestAnimationFrame(animateBullet);
-      } else {
-        bullet.remove();
-      }
+      const elapsed = currentTime - startTime, progress = elapsed / 800;
+      if (progress < 1) { bullet.style.left = (gunSlideRect.right - 10 + progress * (800 / sceneScale)) + 'px'; requestAnimationFrame(animateBullet); } 
+      else { bullet.remove(); }
     });
   }
 
   gunTrigger.addEventListener('click', shoot);
 
-  // --- Magazine & Ammo Logic ---
   let isDraggingMag = false, startMagDragX, startMagDragY, magPos = { x: 0, y: 0 };
   
   function checkMagInserted() {
-    if (loadedAmmoCount === 0) {
-        showNotification("Magazine is empty. Load some ammo first.");
-        return false; 
-    }
-    const gripRect = gunGrip.getBoundingClientRect();
-    const magRect = magazine.getBoundingClientRect();
-    const magCenterX = magRect.left + magRect.width / 2;
-    const magCenterY = magRect.top + magRect.height / 2;
+    if (loadedAmmoCount === 0) { showNotification("Magazine is empty. Load some ammo first."); return false; }
+    const gripRect = gunGrip.getBoundingClientRect(), magRect = magazine.getBoundingClientRect();
+    const magCenterX = magRect.left + magRect.width / 2, magCenterY = magRect.top + magRect.height / 2;
     const gripContainsCenter = magCenterX > gripRect.left && magCenterX < gripRect.right && magCenterY > gripRect.top && magCenterY < gripRect.bottom;
-
     if (gripContainsCenter) {
-        magInserted = true;
-        magazine.style.display = 'none';
-        shellEjected = false;
-        magazineLoaded = false;
-        gunSlide.style.left = '0px'; 
-        gunSlide.style.cursor = 'grab'; 
-        // *** ZMIANA ***
-        // Ustawienie podpowiedzi i kursora po włożeniu magazynka
-        gunGrip.style.cursor = 'grab';
-        gunGrip.title = 'Click to eject, hold to drag';
+        magInserted = true; magazine.style.display = 'none'; shellEjected = false; magazineLoaded = false;
+        gunSlide.style.left = '0px'; gunSlide.style.cursor = 'grab'; 
+        gunGrip.style.cursor = 'grab'; gunGrip.title = 'Click to eject, hold to drag';
         showNotification('Magazine inserted.');
         return true;
     }
@@ -478,190 +632,108 @@
   }
 
   function ejectMagazine() {
-    magazine.style.display = 'block';
-    const gunRect = gun.getBoundingClientRect();
-    const sceneRect = scene.getBoundingClientRect();
+    magazine.style.display = 'block'; const gunRect = gun.getBoundingClientRect(), sceneRect = scene.getBoundingClientRect();
     magPos.x = (gunRect.left - sceneRect.left) / sceneScale + (gunRect.width / 2 / sceneScale);
     magPos.y = (gunRect.top - sceneRect.top) / sceneScale + (gunRect.height / sceneScale);
-    magazine.style.left = magPos.x + 'px';
-    magazine.style.top = magPos.y + 'px';
+    magazine.style.left = magPos.x + 'px'; magazine.style.top = magPos.y + 'px';
     magazine.style.borderColor = '#222';
-    magInserted = false;
-    magazineLoaded = false;
-    ammoCount = 0;
-    loadedAmmoCount = 0;
-    updateAmmoIndicator();
-    gunSlide.style.left = '0px'; 
-    gunSlide.style.cursor = 'default'; 
-    gunGrip.style.cursor = 'grab';
-    gunGrip.title = '';
+    magInserted = false; magazineLoaded = false; ammoCount = 0; loadedAmmoCount = 0;
+    updateAmmoIndicator(); gunSlide.style.left = '0px'; gunSlide.style.cursor = 'default'; 
+    gunGrip.style.cursor = 'grab'; gunGrip.title = '';
     document.querySelectorAll('.ammo.interactive-item').forEach(ammo => ammo.remove());
-    createAmmo();
-    showNotification('Magazine ejected.');
+    createAmmo(); showNotification('Magazine ejected.');
+    updateAchievementProgress('eject_10_mags', 1);
   }
-
-  // *** ZMIANA ***
-  // Usunięto stary event 'click' na rękojeści.
-  // gunGrip.addEventListener('click', ...);
 
   function updateAmmoIndicator() {
     ammoLoadedIndicator.textContent = `${loadedAmmoCount} / ${maxAmmo}`;
-    if(magazineLoaded) {
-        ammoLoadedIndicator.textContent = `${ammoCount} / ${maxAmmo}`;
-    }
+    if(magazineLoaded) { ammoLoadedIndicator.textContent = `${ammoCount} / ${maxAmmo}`; }
   }
 
   function createAmmo() {
-    const initialAmmoX = 600; 
-    const initialAmmoY = 950;
-    const ammoSpacingX = 25, ammoSpacingY = 30;
+    const initialAmmoX = 600, initialAmmoY = 950, ammoSpacingX = 25, ammoSpacingY = 30;
     for (let i = 0; i < maxAmmo; i++) {
-      const ammo = document.createElement('div');
-      ammo.className = 'ammo interactive-item';
-      const ammoLeft = initialAmmoX + (i % 6) * ammoSpacingX;
-      const ammoTop = initialAmmoY + Math.floor(i / 6) * ammoSpacingY;
-      ammo.style.left = ammoLeft + 'px';
-      ammo.style.top = ammoTop + 'px';
+      const ammo = document.createElement('div'); ammo.className = 'ammo interactive-item';
+      ammo.style.left = (initialAmmoX + (i % 6) * ammoSpacingX) + 'px';
+      ammo.style.top = (initialAmmoY + Math.floor(i / 6) * ammoSpacingY) + 'px';
       scene.appendChild(ammo);
     }
   }
 
   magazine.addEventListener('mousedown', (e) => {
     if (magInserted) return;
-    e.preventDefault();
-    e.stopPropagation();
-    isDraggingMag = true;
-    magazine.style.cursor = 'grabbing';
-    magazine.style.transition = 'none';
-    startMagDragX = e.clientX;
-    startMagDragY = e.clientY;
+    e.preventDefault(); e.stopPropagation(); isDraggingMag = true;
+    magazine.style.cursor = 'grabbing'; magazine.style.transition = 'none';
+    startMagDragX = e.clientX; startMagDragY = e.clientY;
   });
 
-  // --- Global Drag & Drop ---
-  let isDraggingGroup = false;
-  let groupDragStart = { x: 0, y: 0 };
-  let isDraggingGun = false;
-  let gunDragStart = { x: 0, y: 0 };
-  let gunStartPos = { x: 0, y: 0 };
-  
-  // *** ZMIANA ***
-  // Dodano flagi do obsługi przeciągania/klikania rękojeści
-  let isDraggingGunViaGrip = false;
-  let gunGripMoved = false;
+  let isDraggingGroup = false, groupDragStart = { x: 0, y: 0 };
+  let isDraggingGun = false, gunDragStart = { x: 0, y: 0 }, gunStartPos = { x: 0, y: 0 };
+  let isDraggingGunViaGrip = false, gunGripMoved = false;
 
-  // *** ZMIANA ***
-  // Dodano nasłuchiwanie na `mousedown` dla rękojeści
   gunGrip.addEventListener('mousedown', (e) => {
-    // Ta logika działa tylko, gdy magazynek jest włożony
     if (magInserted) {
-      e.stopPropagation();
-      clearSelection();
-      isDraggingGunViaGrip = true; // Zaczynamy potencjalny drag/click
-      gunGripMoved = false; // Resetujemy flagę ruchu
-      gun.style.cursor = 'grabbing';
-      gunDragStart.x = e.clientX;
-      gunDragStart.y = e.clientY;
-      gunStartPos.x = gun.offsetLeft;
-      gunStartPos.y = gun.offsetTop;
+      e.stopPropagation(); clearSelection(); isDraggingGunViaGrip = true; gunGripMoved = false;
+      gun.style.cursor = 'grabbing'; gunDragStart.x = e.clientX; gunDragStart.y = e.clientY;
+      gunStartPos.x = gun.offsetLeft; gunStartPos.y = gun.offsetTop;
     }
   });
 
   scene.addEventListener('mousedown', (e) => {
     if (e.target.classList.contains('interactive-item')) {
-      e.stopPropagation();
-      const item = e.target;
-      
-      if (item._animationId) {
-        cancelAnimationFrame(item._animationId);
-        delete item._animationId;
+      e.stopPropagation(); const item = e.target;
+      if (item.classList.contains('casing') && item._animationId) {
+        updateAchievementProgress('catch_mid_air', 1);
       }
-      
+      if (item._animationId) { cancelAnimationFrame(item._animationId); delete item._animationId; }
       const isAlreadySelected = item.classList.contains('selected');
-      if (!e.ctrlKey && !isAlreadySelected) {
-        clearSelection();
-        item.classList.add('selected');
-      } else if (e.ctrlKey) {
-        item.classList.toggle('selected');
-      }
+      if (!e.ctrlKey && !isAlreadySelected) { clearSelection(); item.classList.add('selected'); } 
+      else if (e.ctrlKey) { item.classList.toggle('selected'); }
       if (document.querySelector('.interactive-item.selected')) {
-        isDraggingGroup = true;
-        groupDragStart.x = e.clientX;
-        groupDragStart.y = e.clientY;
-        
+        isDraggingGroup = true; groupDragStart.x = e.clientX; groupDragStart.y = e.clientY;
         dragVelocityTracker = { lastX: e.clientX, lastY: e.clientY, lastTime: performance.now(), vx: 0, vy: 0 };
-        
         document.querySelectorAll('.interactive-item.selected').forEach(selectedItem => {
-          selectedItem._dragStartX = selectedItem.offsetLeft;
-          selectedItem._dragStartY = selectedItem.offsetTop;
+          selectedItem._dragStartX = selectedItem.offsetLeft; selectedItem._dragStartY = selectedItem.offsetTop;
           selectedItem.classList.add('grabbing');
         });
       }
     } else if (e.target === gunFrame || (e.target === gunGrip && !magInserted)) {
-      e.stopPropagation();
-      clearSelection();
-      isDraggingGun = true;
-      gun.style.cursor = 'grabbing';
-      gunDragStart.x = e.clientX;
-      gunDragStart.y = e.clientY;
-      gunStartPos.x = gun.offsetLeft;
-      gunStartPos.y = gun.offsetTop;
+      e.stopPropagation(); clearSelection(); isDraggingGun = true; gun.style.cursor = 'grabbing';
+      gunDragStart.x = e.clientX; gunDragStart.y = e.clientY;
+      gunStartPos.x = gun.offsetLeft; gunStartPos.y = gun.offsetTop;
     } else if (e.target === scene) {
-      clearSelection();
-      isPanning = true;
-      scene.style.cursor = 'grabbing';
-      panStartX = e.clientX;
-      panStartY = e.clientY;
-      startSceneTranslateX = sceneTranslateX;
-      startSceneTranslateY = sceneTranslateY;
+      clearSelection(); isPanning = true; scene.style.cursor = 'grabbing';
+      panStartX = e.clientX; panStartY = e.clientY;
+      startSceneTranslateX = sceneTranslateX; startSceneTranslateY = sceneTranslateY;
     }
   });
 
   document.addEventListener('mousemove', (e) => {
     if (isDraggingGroup) {
-      let dx = (e.clientX - groupDragStart.x) / sceneScale;
-      let dy = (e.clientY - groupDragStart.y) / sceneScale;
+      let dx = (e.clientX - groupDragStart.x) / sceneScale, dy = (e.clientY - groupDragStart.y) / sceneScale;
       document.querySelectorAll('.interactive-item.selected').forEach(item => {
-        item.style.left = (item._dragStartX + dx) + 'px';
-        item.style.top = (item._dragStartY + dy) + 'px';
+        item.style.left = (item._dragStartX + dx) + 'px'; item.style.top = (item._dragStartY + dy) + 'px';
       });
-      
-      const now = performance.now();
-      const dt = now - dragVelocityTracker.lastTime;
+      const now = performance.now(); const dt = now - dragVelocityTracker.lastTime;
       if (dt > 0) {
         dragVelocityTracker.vx = (e.clientX - dragVelocityTracker.lastX) / dt;
         dragVelocityTracker.vy = (e.clientY - dragVelocityTracker.lastY) / dt;
       }
-      dragVelocityTracker.lastX = e.clientX;
-      dragVelocityTracker.lastY = e.clientY;
-      dragVelocityTracker.lastTime = now;
+      dragVelocityTracker.lastX = e.clientX; dragVelocityTracker.lastY = e.clientY; dragVelocityTracker.lastTime = now;
     }
     if (isDraggingMag) {
-      let dx = (e.clientX - startMagDragX) / sceneScale;
-      let dy = (e.clientY - startMagDragY) / sceneScale;
-      magPos.x += dx;
-      magPos.y += dy;
-      magazine.style.left = magPos.x + 'px';
-      magazine.style.top = magPos.y + 'px';
-      startMagDragX = e.clientX;
-      startMagDragY = e.clientY;
+      let dx = (e.clientX - startMagDragX) / sceneScale, dy = (e.clientY - startMagDragY) / sceneScale;
+      magPos.x += dx; magPos.y += dy; magazine.style.left = magPos.x + 'px'; magazine.style.top = magPos.y + 'px';
+      startMagDragX = e.clientX; startMagDragY = e.clientY;
     }
-    // *** ZMIANA ***
-    // Logika przesuwania pistoletu (działa dla ramy i rękojeści)
     if (isDraggingGun || isDraggingGunViaGrip) {
-        let dx = (e.clientX - gunDragStart.x) / sceneScale;
-        let dy = (e.clientY - gunDragStart.y) / sceneScale;
-        gun.style.left = (gunStartPos.x + dx) + 'px';
-        gun.style.top = (gunStartPos.y + dy) + 'px';
-        // Jeśli drag zainicjowano z rękojeści, oznaczamy, że mysz się poruszyła
-        if(isDraggingGunViaGrip) {
-            gunGripMoved = true;
-        }
+        let dx = (e.clientX - gunDragStart.x) / sceneScale, dy = (e.clientY - gunDragStart.y) / sceneScale;
+        gun.style.left = (gunStartPos.x + dx) + 'px'; gun.style.top = (gunStartPos.y + dy) + 'px';
+        if(isDraggingGunViaGrip) { gunGripMoved = true; }
     }
     if (isPanning) {
-      const dx = e.clientX - panStartX;
-      const dy = e.clientY - panStartY;
-      sceneTranslateX = startSceneTranslateX + dx;
-      sceneTranslateY = startSceneTranslateY + dy;
+      const dx = e.clientX - panStartX, dy = e.clientY - panStartY;
+      sceneTranslateX = startSceneTranslateX + dx; sceneTranslateY = startSceneTranslateY + dy;
       updateSceneTransform();
     }
     if (isDraggingGunSlide) { 
@@ -670,10 +742,7 @@
       const minLeft = 0, maxLeft = -60;
       newLeft = Math.max(maxLeft, Math.min(newLeft, minLeft));
       gunSlide.style.left = newLeft + 'px'; 
-      if (newLeft < -50 && !shellEjected) {
-        shellEjected = true;
-        playSound(loadSound);
-      }
+      if (newLeft < -50 && !shellEjected) { shellEjected = true; playSound(loadSound); }
       startGunSlideX = e.clientX; 
     }
   });
@@ -683,78 +752,45 @@
       isDraggingGroup = false;
       const droppedItems = Array.from(document.querySelectorAll('.interactive-item.selected'));
       const magRect = magazine.getBoundingClientRect();
-      const initialVx = dragVelocityTracker.vx * THROW_VELOCITY_MULTIPLIER / sceneScale;
-      const initialVy = dragVelocityTracker.vy * THROW_VELOCITY_MULTIPLIER / sceneScale;
-      let loadedThisDrop = 0;
-      
-      let isGroupOverMagazine = false;
+      const initialVx = dragVelocityTracker.vx * THROW_VELOCITY_MULTIPLIER / sceneScale, initialVy = dragVelocityTracker.vy * THROW_VELOCITY_MULTIPLIER / sceneScale;
+      let loadedThisDrop = 0, isGroupOverMagazine = false;
       for (const item of droppedItems) {
         if (item.classList.contains('ammo')) {
           const itemRect = item.getBoundingClientRect();
-          const isOverMag = !(itemRect.right < magRect.left || itemRect.left > magRect.right || itemRect.bottom < magRect.top || itemRect.top > magRect.bottom);
-          if (isOverMag) {
-            isGroupOverMagazine = true;
-            break;
+          if (!(itemRect.right < magRect.left || itemRect.left > magRect.right || itemRect.bottom < magRect.top || itemRect.top > magRect.bottom)) {
+            isGroupOverMagazine = true; break;
           }
         }
       }
-
       droppedItems.forEach(item => {
         item.classList.remove('grabbing');
         if (item.classList.contains('ammo')) {
           if (isGroupOverMagazine && loadedAmmoCount < maxAmmo) {
-            item.remove();
-            loadedAmmoCount++;
-            loadedThisDrop++;
+            item.remove(); loadedAmmoCount++; loadedThisDrop++;
           }
-        } 
-        else if (item.classList.contains('casing')) {
-          applyPhysicsToItem(item, initialVx, initialVy);
-        }
+        } else if (item.classList.contains('casing')) { applyPhysicsToItem(item, initialVx, initialVy); }
       });
-      
       if (loadedThisDrop > 0) {
-        updateAmmoIndicator();
-        magazine.style.borderColor = '#ffeb3b';
+        updateAmmoIndicator(); magazine.style.borderColor = '#ffeb3b';
         showNotification(`Loaded ${loadedThisDrop} round(s).`);
+        updateAchievementProgress('load_150', loadedThisDrop);
       }
-
       clearSelection();
     }
-    if (isDraggingMag) {
-      isDraggingMag = false;
-      magazine.style.cursor = 'grab';
-      checkMagInserted(); 
-    }
-    if(isDraggingGun) {
-        isDraggingGun = false;
-        gun.style.cursor = 'grab';
-    }
-    // *** ZMIANA ***
-    // Logika kończąca drag/click na rękojeści
+    if (isDraggingMag) { isDraggingMag = false; magazine.style.cursor = 'grab'; checkMagInserted(); }
+    if (isDraggingGun) { isDraggingGun = false; gun.style.cursor = 'grab'; }
     if (isDraggingGunViaGrip) {
-      isDraggingGunViaGrip = false;
-      gun.style.cursor = 'grab';
-      // Jeśli mysz się nie poruszyła, to był click -> eject.
-      if (!gunGripMoved) {
-        ejectMagazine();
-      }
+      isDraggingGunViaGrip = false; gun.style.cursor = 'grab';
+      if (!gunGripMoved) { ejectMagazine(); }
     }
-    if (isPanning) {
-      isPanning = false;
-      scene.style.cursor = 'grab';
-    }
+    if (isPanning) { isPanning = false; scene.style.cursor = 'grab'; }
     if (isDraggingGunSlide) { 
-      isDraggingGunSlide = false; 
-      gunSlide.style.cursor = 'grab'; 
+      isDraggingGunSlide = false; gunSlide.style.cursor = 'grab'; 
       if (shellEjected) { 
-        magazineLoaded = true;
-        ammoCount = loadedAmmoCount;
-        updateAmmoIndicator();
+        magazineLoaded = true; ammoCount = loadedAmmoCount; updateAmmoIndicator();
         showNotification(`Weapon loaded with ${ammoCount} rounds.`);
       }
-      gunSlide.style.transition = 'left 0.1s ease-out'; 
-      gunSlide.style.left = '0px'; 
+      gunSlide.style.transition = 'left 0.1s ease-out'; gunSlide.style.left = '0px'; 
       setTimeout(() => gunSlide.style.transition = 'left 0.15s ease-in-out', 100);
     }
   });
@@ -763,25 +799,19 @@
     document.querySelectorAll('.interactive-item.selected').forEach(item => item.classList.remove('selected'));
   }
 
-  // --- UI & Game Start ---
   function showNotification(message, duration = 2000) {
     notification.textContent = message;
     notification.style.opacity = '1';
-    setTimeout(() => {
-        notification.style.opacity = '0';
-    }, duration);
+    setTimeout(() => { notification.style.opacity = '0'; }, duration);
   }
 
   playBtn.addEventListener('click', () => {
     overlay.style.display = 'none';
+    loadAchievements();
     createAmmo();
-
-    magPos.x = 900;
-    magPos.y = 980;
+    magPos.x = 900; magPos.y = 980;
     magazine.style.transform = '';
-    magazine.style.left = magPos.x + 'px';
-    magazine.style.top = magPos.y + 'px';
-    
+    magazine.style.left = magPos.x + 'px'; magazine.style.top = magPos.y + 'px';
     updateAmmoIndicator();
     showNotification('Drag and drop ammo onto magazine to load it.');
   });
