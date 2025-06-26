@@ -313,14 +313,9 @@
     sound.play();
   }
 
-  function ejectCasing(startPos) {
-    const casing = document.createElement('div');
-    casing.className = 'casing in-air';
-    
-    casing.style.left = startPos.x + 'px';
-    casing.style.top = startPos.y + 'px';
-    scene.appendChild(casing);
-    playSound(casingSound);
+  function applyPhysicsToItem(item, initialVelocityX = 0, initialVelocityY = 0) {
+    item.classList.add('in-air');
+    item.classList.remove('selected', 'grabbing');
 
     const floorY = 1992;
     const ceilingY = 0;
@@ -330,58 +325,69 @@
     const bounciness = 0.6;
     const friction = 0.95;
     const gravity = 0.3;
-
-    let velocityX = (Math.random() - 0.5) * 10;
-    let velocityY = -(Math.random() * 5 + 10);
-    let rotation = Math.random() * 360;
-    let rotationSpeed = (Math.random() - 0.5) * 20;
     
-    let animationId;
+    let pos = { x: item.offsetLeft, y: item.offsetTop };
+    let velocityX = initialVelocityX;
+    let velocityY = initialVelocityY;
+    let rotation = parseFloat(item.style.transform.replace(/[^0-9-.]/g, '')) || 0;
+    let rotationSpeed = (Math.random() - 0.5) * 20;
 
-    function animateCasing() {
+    let animationId;
+    function animate() {
       velocityY += gravity;
-      startPos.x += velocityX;
-      startPos.y += velocityY;
+      pos.x += velocityX;
+      pos.y += velocityY;
       rotation += rotationSpeed;
 
-      if (startPos.y >= floorY) {
-          startPos.y = floorY;
+      if (pos.y >= floorY) {
+          pos.y = floorY;
           velocityY *= -bounciness;
           velocityX *= friction;
           rotationSpeed *= 0.5;
 
           if (Math.abs(velocityY) < 1) {
-              casing.style.top = `${floorY}px`;
-              casing.style.transform = `rotate(${rotation}deg)`;
-              casing.classList.remove('in-air');
-              casing.classList.add('interactive-item');
+              item.style.top = `${floorY}px`;
+              item.style.transform = `rotate(${rotation}deg)`;
+              item.classList.remove('in-air');
+              item.classList.add('interactive-item');
               cancelAnimationFrame(animationId);
               return;
           }
       }
 
-      if (startPos.y <= ceilingY) {
-          startPos.y = ceilingY;
+      if (pos.y <= ceilingY) {
+          pos.y = ceilingY;
           velocityY *= -bounciness;
       }
-      
-      if (startPos.x >= rightWallX) {
-          startPos.x = rightWallX;
+      if (pos.x >= rightWallX) {
+          pos.x = rightWallX;
           velocityX *= -bounciness;
       }
-
-      if (startPos.x <= leftWallX) {
-          startPos.x = leftWallX;
+      if (pos.x <= leftWallX) {
+          pos.x = leftWallX;
           velocityX *= -bounciness;
       }
       
-      casing.style.transform = `rotate(${rotation}deg)`;
-      casing.style.left = `${startPos.x}px`;
-      casing.style.top = `${startPos.y}px`;
+      item.style.transform = `rotate(${rotation}deg)`;
+      item.style.left = `${pos.x}px`;
+      item.style.top = `${pos.y}px`;
 
-      animationId = requestAnimationFrame(animateCasing);
+      animationId = requestAnimationFrame(animate);
     }
-    animationId = requestAnimationFrame(animateCasing);
+    animationId = requestAnimationFrame(animate);
+  }
+
+  function ejectCasing(startPos) {
+    const casing = document.createElement('div');
+    casing.className = 'casing';
+    casing.style.left = startPos.x + 'px';
+    casing.style.top = startPos.y + 'px';
+    scene.appendChild(casing);
+    playSound(casingSound);
+    
+    const initialVx = (Math.random() - 0.5) * 10;
+    const initialVy = -(Math.random() * 5 + 10);
+    applyPhysicsToItem(casing, initialVx, initialVy);
   }
 
   gunSlide.addEventListener('mousedown', (e) => { 
@@ -632,36 +638,45 @@
   document.addEventListener('mouseup', () => {
     if (isDraggingGroup) {
       isDraggingGroup = false;
-      document.querySelectorAll('.interactive-item.grabbing').forEach(item => {
-        item.classList.remove('grabbing');
-      });
-      const magRect = magazine.getBoundingClientRect();
-      let loadedThisDrop = 0;
-      const selectedAmmoElements = document.querySelectorAll('.ammo.selected');
-      if (selectedAmmoElements.length > 0) {
-        let isAnyAmmoOverMag = false;
-        const firstAmmoRect = selectedAmmoElements[0].getBoundingClientRect();
-         if (!(firstAmmoRect.right < magRect.left || firstAmmoRect.left > magRect.right || firstAmmoRect.bottom < magRect.top || firstAmmoRect.top > magRect.bottom)) {
-          isAnyAmmoOverMag = true;
-        }
+      
+      const droppedItems = Array.from(document.querySelectorAll('.interactive-item.selected'));
+      droppedItems.forEach(item => item.classList.remove('grabbing'));
 
-        if (isAnyAmmoOverMag) {
-          for (const ammo of selectedAmmoElements) {
+      let ammoToLoad = [];
+      
+      droppedItems.forEach(item => {
+        if (item.classList.contains('casing')) {
+            applyPhysicsToItem(item, (Math.random() - 0.5) * 2, 0);
+        } else if (item.classList.contains('ammo')) {
+            ammoToLoad.push(item);
+        }
+      });
+      
+      if (ammoToLoad.length > 0) {
+        const magRect = magazine.getBoundingClientRect();
+        const firstAmmoRect = ammoToLoad[0].getBoundingClientRect();
+        const isOverMag = !(firstAmmoRect.right < magRect.left || firstAmmoRect.left > magRect.right || firstAmmoRect.bottom < magRect.top || firstAmmoRect.top > magRect.bottom);
+        
+        if (isOverMag) {
+          let loadedThisDrop = 0;
+          for (const ammo of ammoToLoad) {
             if (loadedAmmoCount < maxAmmo) {
               ammo.remove();
               loadedAmmoCount++;
               loadedThisDrop++;
             } else {
-              break; 
+              break;
             }
           }
-        }
-        if (loadedThisDrop > 0) {
-          updateAmmoIndicator();
-          magazine.style.borderColor = '#ffeb3b';
-          showNotification(`Loaded ${loadedThisDrop} rounds.`);
+          if (loadedThisDrop > 0) {
+            updateAmmoIndicator();
+            magazine.style.borderColor = '#ffeb3b';
+            showNotification(`Loaded ${loadedThisDrop} rounds.`);
+          }
         }
       }
+
+      clearSelection();
     }
     if (isDraggingMag) {
       isDraggingMag = false;
