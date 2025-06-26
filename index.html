@@ -251,6 +251,12 @@
         border: 1px solid #61dafb;
         box-shadow: 0 0 20px rgba(97, 218, 251, 0.3);
         position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+    #achievements-list-wrapper {
+        flex-grow: 1;
+        overflow-y: auto;
     }
     #achievements-container h2 {
         text-align: center;
@@ -322,7 +328,24 @@
         color: white;
         text-shadow: 1px 1px 2px black;
     }
-
+    /* --- NOWY STYL DLA PRZYCISKU RESETU --- */
+    #reset-achievements-btn {
+        margin-top: 20px;
+        padding: 10px 20px;
+        width: 100%;
+        background-color: #dc3545;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        box-sizing: border-box;
+    }
+    #reset-achievements-btn:hover {
+        background-color: #c82333;
+    }
   </style>
 </head>
 <body>
@@ -361,7 +384,11 @@
     <div id="achievements-container">
         <button id="close-achievements-btn">×</button>
         <h2>Achievements</h2>
-        <div id="achievements-list"></div>
+        <!-- Zmieniono strukturę, aby przycisk resetu był zawsze na dole -->
+        <div id="achievements-list-wrapper">
+            <div id="achievements-list"></div>
+        </div>
+        <button id="reset-achievements-btn">Reset Progress</button>
     </div>
 </div>
 
@@ -392,6 +419,9 @@
   const achievementsGui = document.getElementById('achievements-gui');
   const closeAchievementsBtn = document.getElementById('close-achievements-btn');
   const achievementsList = document.getElementById('achievements-list');
+  // --- NOWY ELEMENT DOM ---
+  const resetAchievementsBtn = document.getElementById('reset-achievements-btn');
+
 
   // --- Achievements ---
   let achievements = {
@@ -417,7 +447,6 @@
       unlocked: false
     },
     'catch_mid_air': {
-      // *** ZMIANA NAZWY OSIĄGNIĘCIA ***
       title: 'Catch mid air',
       description: 'Catch a shell casing while it is still in the air.',
       target: 1,
@@ -441,6 +470,20 @@
           achievements[id].unlocked = savedAchievements[id].unlocked;
         }
       }
+    }
+  }
+  
+  // --- NOWA FUNKCJA DO RESETOWANIA POSTĘPÓW ---
+  function resetAchievements() {
+    if (confirm('Are you sure you want to reset all achievement progress? This cannot be undone.')) {
+      localStorage.removeItem('gunGameAchievements');
+      // Resetuj obiekt w pamięci do stanu początkowego
+      for (const id in achievements) {
+        achievements[id].current = 0;
+        achievements[id].unlocked = false;
+      }
+      renderAchievements(); // Odśwież widok
+      showNotification('Achievement progress has been reset.');
     }
   }
 
@@ -492,7 +535,11 @@
         achievementsGui.style.display = 'none';
     }
   });
+  // --- NOWY EVENT LISTENER ---
+  resetAchievementsBtn.addEventListener('click', resetAchievements);
   
+  
+  // --- Pozostały kod bez zmian ---
   let sceneTranslateX = 0, sceneTranslateY = 0, sceneScale = 1;
   let isPanning = false;
   let panStartX, panStartY, startSceneTranslateX, startSceneTranslateY;
