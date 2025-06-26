@@ -45,14 +45,15 @@
       border: 1px solid #61dafb;
     }
 
+    /* ZMIANA: Broń jest teraz pozycjonowana w px, aby umożliwić przeciąganie */
     #gun {
       position: absolute;
       width: 290px; 
       height: 170px;
-      left: calc(50% + 250px);
-      top: 50%;
-      transform: translate(-50%, -50%);
+      left: 1100px; /* Startowa pozycja w px */
+      top: 915px; /* Startowa pozycja w px */
       z-index: 10;
+      /* usunięto transform, left/top calc */
     }
 
     #gun-slide {
@@ -168,9 +169,19 @@
         background: #111;
     }
 
+    /* ZMIANA: Wspólna klasa dla interaktywnych przedmiotów */
+    .interactive-item {
+        transition: outline 0.1s;
+        cursor: grab;
+    }
+    .interactive-item.selected {
+        outline: 2px solid #61dafb;
+        box-shadow: 0 0 10px #61dafb;
+        z-index: 21; /* Wyżej niż inne przedmioty */
+    }
+
     #magazine { position: absolute; width: 35px; height: 120px; background: #3a3a3a; border: 3px solid #222; border-radius: 4px; cursor: grab; z-index: 15; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 2px 2px 6px rgba(0,0,0,0.5); }
-    .ammo { position: absolute; width: 12px; height: 20px; background: #d4af37; border: 1px solid #8b6e2f; border-radius: 3px; cursor: grab; z-index: 20; transition: outline 0.1s; }
-    .ammo.selected { outline: 2px solid #61dafb; box-shadow: 0 0 10px #61dafb; }
+    .ammo { position: absolute; width: 12px; height: 20px; background: #d4af37; border: 1px solid #8b6e2f; border-radius: 3px; z-index: 20; }
     .bullet { position: absolute; width: 10px; height: 10px; background: #ff8c00; border-radius: 50%; box-shadow: 0 0 8px 3px #ff8c00; z-index: 100; pointer-events: none; }
     
     .casing {
@@ -182,7 +193,10 @@
       box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
       transform-origin: center;
       z-index: 5;
-      pointer-events: none;
+    }
+    /* ZMIANA: Klasa dla łuski w locie, aby nie dało się jej złapać */
+    .casing.in-air {
+        pointer-events: none;
     }
 
     #overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(20, 20, 20, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 25px; z-index: 2000; font-family: 'Arial Black', Gadget, sans-serif; }
@@ -268,7 +282,7 @@
     const moveSpeed = 20;
     if (e.ctrlKey && e.key.toLowerCase() === 'a') {
         e.preventDefault();
-        document.querySelectorAll('.ammo:not(.selected)').forEach(ammo => ammo.classList.add('selected'));
+        document.querySelectorAll('.interactive-item:not(.selected)').forEach(item => item.classList.add('selected'));
         return;
     }
     if (['w', 's', 'a', 'd'].includes(e.key.toLowerCase())) {
@@ -282,7 +296,8 @@
         updateSceneTransform();
     }
     if (e.key === 'Escape') {
-      location.reload();
+      clearSelection();
+      // location.reload(); // można przywrócić w razie potrzeby
     }
   });
 
@@ -300,41 +315,45 @@
     sound.play();
   }
 
+  // ZMIANA: Logika wyrzucania, lądowania i interakcji łusek
   function ejectCasing(startPos) {
     const casing = document.createElement('div');
-    casing.classList.add('casing');
+    casing.className = 'casing in-air'; // Startuje jako nieinteraktywna
     
     casing.style.left = startPos.x + 'px';
     casing.style.top = startPos.y + 'px';
-    
     scene.appendChild(casing);
     playSound(casingSound);
 
-    const initialVelocityX = (Math.random() * 20 - 10);
-    const initialVelocityY = -(Math.random() * 20 + 25);
-    let velocityX = initialVelocityX;
-    let velocityY = initialVelocityY;
-    const gravity = 1;
-    let rotation = 0;
-    const rotationSpeed = (Math.random() - 0.5) * 40;
-    let currentX = startPos.x;
-    let currentY = startPos.y;
+    let velocityX = (Math.random() - 0.5) * 10;
+    let velocityY = -(Math.random() * 5 + 10);
+    const gravity = 0.3;
+    let rotation = Math.random() * 360;
+    const rotationSpeed = (Math.random() - 0.5) * 20;
+    
+    let animationId;
 
-    const startTime = performance.now();
-    requestAnimationFrame(function animateCasing() {
-        velocityY += gravity;
-        currentX += velocityX;
-        currentY += velocityY;
-        rotation += rotationSpeed;
+    function animateCasing() {
+      velocityY += gravity;
+      startPos.x += velocityX;
+      startPos.y += velocityY;
+      rotation += rotationSpeed;
 
-        casing.style.transform = `translate(${currentX - startPos.x}px, ${currentY - startPos.y}px) rotate(${rotation}deg)`;
+      casing.style.transform = `rotate(${rotation}deg)`;
+      casing.style.left = startPos.x + 'px';
+      casing.style.top = startPos.y + 'px';
 
-        if (performance.now() - startTime < 1500) {
-            requestAnimationFrame(animateCasing);
-        } else {
-            casing.remove();
-        }
-    });
+      // Zatrzymaj na podłodze (granica sceny)
+      if (startPos.y >= 1992) {
+        casing.style.top = '1992px'; // Ustaw na stałej wysokości
+        casing.classList.remove('in-air');
+        casing.classList.add('interactive-item'); // Staje się interaktywna
+        cancelAnimationFrame(animationId);
+      } else {
+        animationId = requestAnimationFrame(animateCasing);
+      }
+    }
+    animationId = requestAnimationFrame(animateCasing);
   }
 
   gunSlide.addEventListener('mousedown', (e) => { 
@@ -361,20 +380,12 @@
       return;
     }
     
-    // ================== KLUCZOWA ZMIANA TUTAJ ==================
-    // 1. Pobierz pozycję sceny i wyrzutni na ekranie
     const sceneRect = scene.getBoundingClientRect();
     const ejectionPortRect = ejectionPort.getBoundingClientRect();
-    
-    // 2. Przelicz pozycję z ekranu na pozycję wewnątrz sceny
-    //    (pozycja wyrzutni - pozycja sceny) / skala
     const casingStartX = (ejectionPortRect.left - sceneRect.left) / sceneScale + (ejectionPortRect.width / 2 / sceneScale);
     const casingStartY = (ejectionPortRect.top - sceneRect.top) / sceneScale + (ejectionPortRect.height / 2 / sceneScale);
-
-    // 3. Wyrzuć łuskę z poprawnych współrzędnych
     ejectCasing({ x: casingStartX, y: casingStartY });
-    // ==========================================================
-
+    
     ammoCount--;
     updateAmmoIndicator();
     
@@ -404,7 +415,7 @@
   gunTrigger.addEventListener('click', shoot);
 
   // --- Magazine & Ammo Logic ---
-  let isDraggingMag = false, startMagDragX, startMagDragY, magPos = { x: 0, y: 0 }, magInitialPos = { x: 0, y: 0 };
+  let isDraggingMag = false, startMagDragX, startMagDragY, magPos = { x: 0, y: 0 };
   
   function checkMagInserted() {
     if (loadedAmmoCount === 0) {
@@ -434,8 +445,10 @@
 
   function ejectMagazine() {
     magazine.style.display = 'block';
-    magPos.x = magInitialPos.x;
-    magPos.y = magInitialPos.y;
+    const gunRect = gun.getBoundingClientRect();
+    const sceneRect = scene.getBoundingClientRect();
+    magPos.x = (gunRect.left - sceneRect.left) / sceneScale + (gunRect.width / 2 / sceneScale);
+    magPos.y = (gunRect.top - sceneRect.top) / sceneScale + (gunRect.height / sceneScale);
     magazine.style.left = magPos.x + 'px';
     magazine.style.top = magPos.y + 'px';
     magazine.style.borderColor = '#222';
@@ -448,12 +461,13 @@
     gunSlide.style.cursor = 'default'; 
     gunGrip.style.cursor = 'grab';
     gunGrip.title = '';
-    document.querySelectorAll('.ammo').forEach(ammo => ammo.remove());
+    document.querySelectorAll('.ammo.interactive-item').forEach(ammo => ammo.remove());
     createAmmo();
   }
 
-  gunGrip.addEventListener('click', () => {
+  gunGrip.addEventListener('click', (e) => {
     if (magInserted) {
+        e.stopPropagation(); // Zapobiegaj przeciąganiu broni gdy klikamy by wyjąć magazynek
         showNotification('Magazine ejected.');
         ejectMagazine();
     }
@@ -472,7 +486,7 @@
     const ammoSpacingX = 25, ammoSpacingY = 30;
     for (let i = 0; i < maxAmmo; i++) {
       const ammo = document.createElement('div');
-      ammo.className = 'ammo';
+      ammo.className = 'ammo interactive-item'; // Od razu interaktywny
       const ammoLeft = initialAmmoX + (i % 6) * ammoSpacingX;
       const ammoTop = initialAmmoY + Math.floor(i / 6) * ammoSpacingY;
       ammo.style.left = ammoLeft + 'px';
@@ -484,6 +498,7 @@
   magazine.addEventListener('mousedown', (e) => {
     if (magInserted) return;
     e.preventDefault();
+    e.stopPropagation();
     isDraggingMag = true;
     magazine.style.cursor = 'grabbing';
     magazine.style.transition = 'none';
@@ -494,28 +509,41 @@
   // --- Global Drag & Drop ---
   let isDraggingGroup = false;
   let groupDragStart = { x: 0, y: 0 };
+  let isDraggingGun = false;
+  let gunDragStart = { x: 0, y: 0 };
+  let gunStartPos = { x: 0, y: 0 };
   
   scene.addEventListener('mousedown', (e) => {
-    if (e.target.classList.contains('ammo')) {
-      const ammo = e.target;
-      const isAlreadySelected = ammo.classList.contains('selected');
+    if (e.target.classList.contains('interactive-item')) {
+      e.stopPropagation();
+      const item = e.target;
+      const isAlreadySelected = item.classList.contains('selected');
       if (!e.ctrlKey && !isAlreadySelected) {
         clearSelection();
-        ammo.classList.add('selected');
+        item.classList.add('selected');
       } else if (e.ctrlKey) {
-        ammo.classList.toggle('selected');
+        item.classList.toggle('selected');
       }
-      if (document.querySelector('.ammo.selected')) {
+      if (document.querySelector('.interactive-item.selected')) {
         isDraggingGroup = true;
         groupDragStart.x = e.clientX;
         groupDragStart.y = e.clientY;
-        document.querySelectorAll('.ammo.selected').forEach(selectedAmmo => {
-          selectedAmmo._dragStartX = selectedAmmo.offsetLeft;
-          selectedAmmo._dragStartY = selectedAmmo.offsetTop;
+        document.querySelectorAll('.interactive-item.selected').forEach(selectedItem => {
+          selectedItem._dragStartX = selectedItem.offsetLeft;
+          selectedItem._dragStartY = selectedItem.offsetTop;
         });
       }
-    } else if (e.target === scene || e.target === gunGrip || e.target === gunFrame) {
-      if (magInserted && e.target === gunGrip) return;
+    } else if (e.target === gunGrip || e.target === gunFrame) {
+      if (magInserted && e.target === gunGrip) return; // Nie przeciągaj gdy chcemy wyjąć magazynek
+      e.stopPropagation();
+      clearSelection();
+      isDraggingGun = true;
+      gun.style.cursor = 'grabbing';
+      gunDragStart.x = e.clientX;
+      gunDragStart.y = e.clientY;
+      gunStartPos.x = gun.offsetLeft;
+      gunStartPos.y = gun.offsetTop;
+    } else if (e.target === scene) {
       clearSelection();
       isPanning = true;
       scene.style.cursor = 'grabbing';
@@ -530,9 +558,9 @@
     if (isDraggingGroup) {
       let dx = (e.clientX - groupDragStart.x) / sceneScale;
       let dy = (e.clientY - groupDragStart.y) / sceneScale;
-      document.querySelectorAll('.ammo.selected').forEach(ammo => {
-        ammo.style.left = (ammo._dragStartX + dx) + 'px';
-        ammo.style.top = (ammo._dragStartY + dy) + 'px';
+      document.querySelectorAll('.interactive-item.selected').forEach(item => {
+        item.style.left = (item._dragStartX + dx) + 'px';
+        item.style.top = (item._dragStartY + dy) + 'px';
       });
     }
     if (isDraggingMag) {
@@ -545,6 +573,12 @@
       startMagDragX = e.clientX;
       startMagDragY = e.clientY;
     }
+    if (isDraggingGun) {
+        let dx = (e.clientX - gunDragStart.x) / sceneScale;
+        let dy = (e.clientY - gunDragStart.y) / sceneScale;
+        gun.style.left = (gunStartPos.x + dx) + 'px';
+        gun.style.top = (gunStartPos.y + dy) + 'px';
+    }
     if (isPanning) {
       const dx = e.clientX - panStartX;
       const dy = e.clientY - panStartY;
@@ -552,7 +586,7 @@
       sceneTranslateY = startSceneTranslateY + dy;
       updateSceneTransform();
     }
-     if (isDraggingGunSlide) { 
+    if (isDraggingGunSlide) { 
       let dx = (e.clientX - startGunSlideX) / sceneScale;
       let newLeft = parseFloat(gunSlide.style.left || 0) + dx;
       const minLeft = 0, maxLeft = -60;
@@ -572,43 +606,40 @@
       const magRect = magazine.getBoundingClientRect();
       let loadedThisDrop = 0;
       const selectedAmmoElements = document.querySelectorAll('.ammo.selected');
-      let isAnyAmmoOverMag = false;
-      for (const ammo of selectedAmmoElements) {
-        const ammoRect = ammo.getBoundingClientRect();
-        if (!(ammoRect.right < magRect.left || ammoRect.left > magRect.right || ammoRect.bottom < magRect.top || ammoRect.top > magRect.bottom)) {
+      if (selectedAmmoElements.length > 0) {
+        let isAnyAmmoOverMag = false;
+        const firstAmmoRect = selectedAmmoElements[0].getBoundingClientRect();
+         if (!(firstAmmoRect.right < magRect.left || firstAmmoRect.left > magRect.right || firstAmmoRect.bottom < magRect.top || firstAmmoRect.top > magRect.bottom)) {
           isAnyAmmoOverMag = true;
-          break;
         }
-      }
-      if (isAnyAmmoOverMag) {
-        for (const ammo of selectedAmmoElements) {
-          if (loadedAmmoCount < maxAmmo) {
-            ammo.remove();
-            loadedAmmoCount++;
-            loadedThisDrop++;
-          } else {
-            break; 
+
+        if (isAnyAmmoOverMag) {
+          for (const ammo of selectedAmmoElements) {
+            if (loadedAmmoCount < maxAmmo) {
+              ammo.remove();
+              loadedAmmoCount++;
+              loadedThisDrop++;
+            } else {
+              break; 
+            }
           }
         }
+        if (loadedThisDrop > 0) {
+          updateAmmoIndicator();
+          magazine.style.borderColor = '#ffeb3b';
+          showNotification(`Loaded ${loadedThisDrop} rounds.`);
+        }
       }
-      if (loadedThisDrop > 0) {
-        updateAmmoIndicator();
-        magazine.style.borderColor = '#ffeb3b';
-        showNotification(`Loaded ${loadedThisDrop} rounds.`);
-      }
-      clearSelection();
     }
     if (isDraggingMag) {
       isDraggingMag = false;
       magazine.style.cursor = 'grab';
       const wasInserted = checkMagInserted(); 
-      if (!wasInserted && !magInserted) {
-        magazine.style.transition = 'left 0.3s, top 0.3s';
-        magPos.x = magInitialPos.x;
-        magPos.y = magInitialPos.y;
-        magazine.style.left = magPos.x + 'px';
-        magazine.style.top = magPos.y + 'px';
-      }
+      // ZMIANA: Usunięto logikę powrotu magazynka na miejsce
+    }
+    if(isDraggingGun) {
+        isDraggingGun = false;
+        gun.style.cursor = 'default';
     }
     if (isPanning) {
       isPanning = false;
@@ -629,7 +660,7 @@
   });
   
   function clearSelection() {
-    document.querySelectorAll('.ammo.selected').forEach(ammo => ammo.classList.remove('selected'));
+    document.querySelectorAll('.interactive-item.selected').forEach(item => item.classList.remove('selected'));
   }
 
   // --- UI & Game Start ---
@@ -644,15 +675,15 @@
   playBtn.addEventListener('click', () => {
     overlay.style.display = 'none';
     createAmmo();
-    magInitialPos.x = magazine.offsetLeft;
-    magInitialPos.y = magazine.offsetTop;
-    magPos.x = magInitialPos.x;
-    magPos.y = magInitialPos.y;
-    magazine.style.transform = 'translate(-50%, -50%)';
+    // Inicjalizacja pozycji magazynka w px
+    magPos.x = magazine.offsetLeft;
+    magPos.y = magazine.offsetTop;
+    magazine.style.transform = ''; // Usuwamy transform, bo pozycjonujemy w px
     magazine.style.left = magPos.x + 'px';
     magazine.style.top = magPos.y + 'px';
+    
     updateAmmoIndicator();
-    showNotification('Drop the magazine on the grip to insert it.');
+    showNotification('Drag and drop ammo onto magazine to load it.');
   });
 </script>
 </body>
