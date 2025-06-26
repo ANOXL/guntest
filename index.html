@@ -322,11 +322,19 @@
     scene.appendChild(casing);
     playSound(casingSound);
 
+    const floorY = 1992;
+    const ceilingY = 0;
+    const leftWallX = 0;
+    const rightWallX = 1985;
+
+    const bounciness = 0.6;
+    const friction = 0.95;
+    const gravity = 0.3;
+
     let velocityX = (Math.random() - 0.5) * 10;
     let velocityY = -(Math.random() * 5 + 10);
-    const gravity = 0.3;
     let rotation = Math.random() * 360;
-    const rotationSpeed = (Math.random() - 0.5) * 20;
+    let rotationSpeed = (Math.random() - 0.5) * 20;
     
     let animationId;
 
@@ -336,18 +344,42 @@
       startPos.y += velocityY;
       rotation += rotationSpeed;
 
-      casing.style.transform = `rotate(${rotation}deg)`;
-      casing.style.left = startPos.x + 'px';
-      casing.style.top = startPos.y + 'px';
+      if (startPos.y >= floorY) {
+          startPos.y = floorY;
+          velocityY *= -bounciness;
+          velocityX *= friction;
+          rotationSpeed *= 0.5;
 
-      if (startPos.y >= 1992) {
-        casing.style.top = '1992px';
-        casing.classList.remove('in-air');
-        casing.classList.add('interactive-item');
-        cancelAnimationFrame(animationId);
-      } else {
-        animationId = requestAnimationFrame(animateCasing);
+          if (Math.abs(velocityY) < 1) {
+              casing.style.top = `${floorY}px`;
+              casing.style.transform = `rotate(${rotation}deg)`;
+              casing.classList.remove('in-air');
+              casing.classList.add('interactive-item');
+              cancelAnimationFrame(animationId);
+              return;
+          }
       }
+
+      if (startPos.y <= ceilingY) {
+          startPos.y = ceilingY;
+          velocityY *= -bounciness;
+      }
+      
+      if (startPos.x >= rightWallX) {
+          startPos.x = rightWallX;
+          velocityX *= -bounciness;
+      }
+
+      if (startPos.x <= leftWallX) {
+          startPos.x = leftWallX;
+          velocityX *= -bounciness;
+      }
+      
+      casing.style.transform = `rotate(${rotation}deg)`;
+      casing.style.left = `${startPos.x}px`;
+      casing.style.top = `${startPos.y}px`;
+
+      animationId = requestAnimationFrame(animateCasing);
     }
     animationId = requestAnimationFrame(animateCasing);
   }
