@@ -91,7 +91,17 @@
     #rear-sight { left: 25px; width: 18px; height: 6px; border-radius: 2px; }
     #front-sight { right: 20px; width: 6px; height: 6px; border-radius: 1px; }
 
-    #ejection-port { position: absolute; width: 50px; height: 24px; background: #282c34; top: 8px; right: 85px; border-radius: 2px; box-shadow: inset 1px 1px 4px rgba(0,0,0,0.8); }
+    #ejection-port { 
+      position: absolute; 
+      width: 50px; 
+      height: 24px; 
+      background: #282c34; 
+      top: 8px; 
+      right: 85px; 
+      border-radius: 2px; 
+      box-shadow: inset 1px 1px 4px rgba(0,0,0,0.8); 
+      overflow: hidden; /* Dodane, aby łuski nie wychodziły poza port */
+    }
     #ejection-port::before { content: ''; position: absolute; width: 15px; height: 6px; background: #3e444c; top: 9px; left: 20px; border-radius: 1px; }
 
     #gun-slide .slide-text { position: absolute; font-family: 'Arial Black', sans-serif; font-size: 16px; color: #ddd; text-shadow: 1px 1px 1px #000; top: 10px; }
@@ -164,6 +174,19 @@
     .ammo { position: absolute; width: 12px; height: 20px; background: #d4af37; border: 1px solid #8b6e2f; border-radius: 3px; cursor: grab; z-index: 20; transition: outline 0.1s; }
     .ammo.selected { outline: 2px solid #61dafb; box-shadow: 0 0 10px #61dafb; }
     .bullet { position: absolute; width: 10px; height: 10px; background: #ff8c00; border-radius: 50%; box-shadow: 0 0 8px 3px #ff8c00; z-index: 100; }
+    
+    /* NOWE: Styl dla łusek */
+    .casing {
+      position: absolute;
+      width: 15px;
+      height: 8px;
+      background: #c4a460;
+      border-radius: 2px 2px 1px 1px;
+      box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+      transform-origin: center;
+      z-index: 5; /* Niżej niż magazynek, ale wyżej niż tło */
+    }
+
     #overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(20, 20, 20, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 25px; z-index: 2000; font-family: 'Arial Black', Gadget, sans-serif; }
     #overlay div:first-child { font-size: 48px; font-weight: bold; color: #61dafb; text-shadow: 0 0 10px #61dafb, 0 0 20px #61dafb; }
     .button { padding: 15px 30px; background: #2196f3; border: none; border-radius: 8px; color: white; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: background-color 0.3s, transform 0.2s; }
@@ -224,6 +247,7 @@
   const gunGrip = document.getElementById('gun-grip');
   const gunTrigger = document.getElementById('gun-trigger');
   const gunFrame = document.getElementById('gun-frame');
+  const ejectionPort = document.getElementById('ejection-port'); // Pobranie elementu wyrzutni
   
   // --- Scene & Camera Controls ---
   let sceneTranslateX = 0, sceneTranslateY = 0, sceneScale = 1;
@@ -271,10 +295,52 @@
   let shellEjected = false;
   const loadSound = new Audio('https://actions.google.com/sounds/v1/weapons/gun_cocking.ogg');
   loadSound.volume = 0.5;
+  const casingSound = new Audio('https://actions.google.com/sounds/v1/coins/coin_drop.ogg'); // Przykładowy dźwięk łuski
+  casingSound.volume = 0.3;
 
   function playSound(sound) {
     sound.currentTime = 0;
     sound.play();
+  }
+
+  // Funkcja do tworzenia i animowania łuski
+  function ejectCasing(position) {
+    const casing = document.createElement('div');
+    casing.classList.add('casing');
+    
+    // Pozycja startowa łuski (z wyrzutni)
+    casing.style.left = position.x + 'px';
+    casing.style.top = position.y + 'px';
+    
+    scene.appendChild(casing);
+    playSound(casingSound); // Odtworzenie dźwięku łuski
+
+    // Parametry animacji łuski
+    const velocityX = Math.random() * 40 - 20; // Losowa prędkość pozioma
+    const velocityY = -(Math.random() * 30 + 20); // Losowa prędkość pionowa (do góry)
+    const angularVelocity = (Math.random() - 0.5) * 0.3; // Losowa prędkość obrotu
+
+    const startTime = performance.now();
+    const animationDuration = 1000; // Czas trwania animacji w ms
+
+    requestAnimationFrame(function animateCasing(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / animationDuration, 1);
+
+      const currentX = position.x + (velocityX * progress * 100) + (Math.random() * 10 - 5); // Dodaj trochę losowości
+      const currentY = position.y + (velocityY * progress * 100) + (0.5 * 9.81 * (progress * 100) * (progress * 100)) + (Math.random() * 10 - 5); // Grawitacja + losowość
+      const currentRotation = angularVelocity * progress * 360;
+
+      casing.style.left = currentX + 'px';
+      casing.style.top = currentY + 'px';
+      casing.style.transform = `rotate(${currentRotation}deg)`;
+
+      if (progress < 1) {
+        requestAnimationFrame(animateCasing);
+      } else {
+        casing.remove(); // Usuń łuskę po zakończeniu animacji
+      }
+    });
   }
 
   gunSlide.addEventListener('mousedown', (e) => { 
@@ -300,16 +366,29 @@
       ejectMagazine();
       return;
     }
+    
+    // Wyrzucenie łuski PRZED animacją pocisku
+    const ejectionPortRect = ejectionPort.getBoundingClientRect();
+    const gunSlideRect = gunSlide.getBoundingClientRect();
+    const casingStartPosition = {
+        x: ejectionPortRect.left + ejectionPortRect.width / 2,
+        y: ejectionPortRect.top + ejectionPortRect.height / 2
+    };
+    ejectCasing(casingStartPosition);
+
     ammoCount--;
     updateAmmoIndicator();
+    
+    // Animacja pocisku
     const bullet = document.createElement('div');
     bullet.classList.add('bullet');
-    const gunSlideRect = gunSlide.getBoundingClientRect(); 
     bullet.style.left = (gunSlideRect.right - 10) + 'px'; 
     bullet.style.top = (gunSlideRect.top + (gunSlideRect.height / 2) - 5) + 'px'; 
     document.body.appendChild(bullet);
+    
     gunSlide.style.boxShadow = '0 0 15px 6px #ff8c00'; 
     setTimeout(() => gunSlide.style.boxShadow = 'inset 0 2px 2px rgba(255,255,255,0.05), inset 0 -2px 3px rgba(0,0,0,0.4)', 100); 
+    
     const startTime = performance.now();
     requestAnimationFrame(function animateBullet(currentTime) {
       const elapsed = currentTime - startTime;
