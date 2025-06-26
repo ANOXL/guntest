@@ -52,6 +52,8 @@
       left: 1100px;
       top: 915px;
       z-index: 10;
+      /* ZMIANA: Kursor dla całego pistoletu */
+      cursor: grab;
     }
 
     #gun-slide {
@@ -277,8 +279,6 @@
 
   window.addEventListener('keydown', (e) => {
     const moveSpeed = 20;
-    // *** ZMIANA ***
-    // Skrót Ctrl+A teraz zaznacza TYLKO amunicję (elementy z klasą .ammo).
     if (e.ctrlKey && e.key.toLowerCase() === 'a') {
         e.preventDefault();
         document.querySelectorAll('.ammo.interactive-item:not(.selected)').forEach(item => {
@@ -467,8 +467,10 @@
         magazineLoaded = false;
         gunSlide.style.left = '0px'; 
         gunSlide.style.cursor = 'grab'; 
-        gunGrip.style.cursor = 'pointer';
-        gunGrip.title = 'Click to eject magazine';
+        // *** ZMIANA ***
+        // Ustawienie podpowiedzi i kursora po włożeniu magazynka
+        gunGrip.style.cursor = 'grab';
+        gunGrip.title = 'Click to eject, hold to drag';
         showNotification('Magazine inserted.');
         return true;
     }
@@ -495,15 +497,12 @@
     gunGrip.title = '';
     document.querySelectorAll('.ammo.interactive-item').forEach(ammo => ammo.remove());
     createAmmo();
+    showNotification('Magazine ejected.');
   }
 
-  gunGrip.addEventListener('click', (e) => {
-    if (magInserted) {
-        e.stopPropagation();
-        showNotification('Magazine ejected.');
-        ejectMagazine();
-    }
-  });
+  // *** ZMIANA ***
+  // Usunięto stary event 'click' na rękojeści.
+  // gunGrip.addEventListener('click', ...);
 
   function updateAmmoIndicator() {
     ammoLoadedIndicator.textContent = `${loadedAmmoCount} / ${maxAmmo}`;
@@ -545,6 +544,28 @@
   let gunDragStart = { x: 0, y: 0 };
   let gunStartPos = { x: 0, y: 0 };
   
+  // *** ZMIANA ***
+  // Dodano flagi do obsługi przeciągania/klikania rękojeści
+  let isDraggingGunViaGrip = false;
+  let gunGripMoved = false;
+
+  // *** ZMIANA ***
+  // Dodano nasłuchiwanie na `mousedown` dla rękojeści
+  gunGrip.addEventListener('mousedown', (e) => {
+    // Ta logika działa tylko, gdy magazynek jest włożony
+    if (magInserted) {
+      e.stopPropagation();
+      clearSelection();
+      isDraggingGunViaGrip = true; // Zaczynamy potencjalny drag/click
+      gunGripMoved = false; // Resetujemy flagę ruchu
+      gun.style.cursor = 'grabbing';
+      gunDragStart.x = e.clientX;
+      gunDragStart.y = e.clientY;
+      gunStartPos.x = gun.offsetLeft;
+      gunStartPos.y = gun.offsetTop;
+    }
+  });
+
   scene.addEventListener('mousedown', (e) => {
     if (e.target.classList.contains('interactive-item')) {
       e.stopPropagation();
@@ -575,8 +596,7 @@
           selectedItem.classList.add('grabbing');
         });
       }
-    } else if (e.target === gunGrip || e.target === gunFrame) {
-      if (magInserted && e.target === gunGrip) return;
+    } else if (e.target === gunFrame || (e.target === gunGrip && !magInserted)) {
       e.stopPropagation();
       clearSelection();
       isDraggingGun = true;
@@ -625,11 +645,17 @@
       startMagDragX = e.clientX;
       startMagDragY = e.clientY;
     }
-    if (isDraggingGun) {
+    // *** ZMIANA ***
+    // Logika przesuwania pistoletu (działa dla ramy i rękojeści)
+    if (isDraggingGun || isDraggingGunViaGrip) {
         let dx = (e.clientX - gunDragStart.x) / sceneScale;
         let dy = (e.clientY - gunDragStart.y) / sceneScale;
         gun.style.left = (gunStartPos.x + dx) + 'px';
         gun.style.top = (gunStartPos.y + dy) + 'px';
+        // Jeśli drag zainicjowano z rękojeści, oznaczamy, że mysz się poruszyła
+        if(isDraggingGunViaGrip) {
+            gunGripMoved = true;
+        }
     }
     if (isPanning) {
       const dx = e.clientX - panStartX;
@@ -656,30 +682,34 @@
     if (isDraggingGroup) {
       isDraggingGroup = false;
       const droppedItems = Array.from(document.querySelectorAll('.interactive-item.selected'));
-      let loadedThisDrop = 0;
       const magRect = magazine.getBoundingClientRect();
-
       const initialVx = dragVelocityTracker.vx * THROW_VELOCITY_MULTIPLIER / sceneScale;
       const initialVy = dragVelocityTracker.vy * THROW_VELOCITY_MULTIPLIER / sceneScale;
+      let loadedThisDrop = 0;
+      
+      let isGroupOverMagazine = false;
+      for (const item of droppedItems) {
+        if (item.classList.contains('ammo')) {
+          const itemRect = item.getBoundingClientRect();
+          const isOverMag = !(itemRect.right < magRect.left || itemRect.left > magRect.right || itemRect.bottom < magRect.top || itemRect.top > magRect.bottom);
+          if (isOverMag) {
+            isGroupOverMagazine = true;
+            break;
+          }
+        }
+      }
 
       droppedItems.forEach(item => {
         item.classList.remove('grabbing');
-
-        // Logika ładowania AMUNICJI.
         if (item.classList.contains('ammo')) {
-          const itemRect = item.getBoundingClientRect();
-          // Sprawdzamy kolizję każdego naboju indywidualnie
-          const isOverMag = !(itemRect.right < magRect.left || itemRect.left > magRect.right || itemRect.bottom < magRect.top || itemRect.top > magRect.bottom);
-          
-          if (isOverMag && loadedAmmoCount < maxAmmo) {
+          if (isGroupOverMagazine && loadedAmmoCount < maxAmmo) {
             item.remove();
             loadedAmmoCount++;
             loadedThisDrop++;
           }
         } 
-        // Logika rzucania/upuszczania ŁUSEK.
         else if (item.classList.contains('casing')) {
-            applyPhysicsToItem(item, initialVx, initialVy);
+          applyPhysicsToItem(item, initialVx, initialVy);
         }
       });
       
@@ -698,7 +728,17 @@
     }
     if(isDraggingGun) {
         isDraggingGun = false;
-        gun.style.cursor = 'default';
+        gun.style.cursor = 'grab';
+    }
+    // *** ZMIANA ***
+    // Logika kończąca drag/click na rękojeści
+    if (isDraggingGunViaGrip) {
+      isDraggingGunViaGrip = false;
+      gun.style.cursor = 'grab';
+      // Jeśli mysz się nie poruszyła, to był click -> eject.
+      if (!gunGripMoved) {
+        ejectMagazine();
+      }
     }
     if (isPanning) {
       isPanning = false;
