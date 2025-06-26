@@ -100,7 +100,7 @@
       right: 85px; 
       border-radius: 2px; 
       box-shadow: inset 1px 1px 4px rgba(0,0,0,0.8); 
-      overflow: hidden; /* Dodane, aby łuski nie wychodziły poza port */
+      overflow: hidden;
     }
     #ejection-port::before { content: ''; position: absolute; width: 15px; height: 6px; background: #3e444c; top: 9px; left: 20px; border-radius: 1px; }
 
@@ -121,17 +121,16 @@
         box-shadow: inset 0 -2px 3px rgba(0,0,0,0.4);
     }
 
-    /* ZMIANA: Chwyt poszerzony i repozycjonowany */
     #gun-grip {
         position: absolute;
-        width: 65px; /* NOWA SZEROKOŚĆ */
+        width: 65px;
         height: 110px;
         background-color: #333;
         background-image:
             radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1px, transparent 0);
         background-size: 4px 4px;
         top: 55px;
-        left: 25px; /* NOWA POZYCJA */
+        left: 25px;
         border-radius: 8px 8px 12px 12px;
         border: 1px solid #222;
         z-index: 8;
@@ -147,7 +146,7 @@
         border-top: none;
         border-radius: 0 0 25px 25px;
         top: 58px;
-        left: 95px; /* NOWA POZYCJA */
+        left: 95px;
         z-index: 11;
     }
 
@@ -169,13 +168,11 @@
         background: #111;
     }
 
-    /* Reszta stylów bez zmian */
     #magazine { position: absolute; width: 35px; height: 120px; background: #3a3a3a; border: 3px solid #222; border-radius: 4px; cursor: grab; z-index: 15; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 2px 2px 6px rgba(0,0,0,0.5); }
     .ammo { position: absolute; width: 12px; height: 20px; background: #d4af37; border: 1px solid #8b6e2f; border-radius: 3px; cursor: grab; z-index: 20; transition: outline 0.1s; }
     .ammo.selected { outline: 2px solid #61dafb; box-shadow: 0 0 10px #61dafb; }
-    .bullet { position: absolute; width: 10px; height: 10px; background: #ff8c00; border-radius: 50%; box-shadow: 0 0 8px 3px #ff8c00; z-index: 100; }
+    .bullet { position: absolute; width: 10px; height: 10px; background: #ff8c00; border-radius: 50%; box-shadow: 0 0 8px 3px #ff8c00; z-index: 100; pointer-events: none; }
     
-    /* NOWE: Styl dla łusek */
     .casing {
       position: absolute;
       width: 15px;
@@ -184,7 +181,8 @@
       border-radius: 2px 2px 1px 1px;
       box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
       transform-origin: center;
-      z-index: 5; /* Niżej niż magazynek, ale wyżej niż tło */
+      z-index: 5;
+      pointer-events: none;
     }
 
     #overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(20, 20, 20, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 25px; z-index: 2000; font-family: 'Arial Black', Gadget, sans-serif; }
@@ -226,7 +224,6 @@
 </div>
 
 <script>
-  // Cały kod JavaScript pozostaje bez zmian
   // --- Game State ---
   let magInserted = false;
   let magazineLoaded = false;
@@ -247,7 +244,7 @@
   const gunGrip = document.getElementById('gun-grip');
   const gunTrigger = document.getElementById('gun-trigger');
   const gunFrame = document.getElementById('gun-frame');
-  const ejectionPort = document.getElementById('ejection-port'); // Pobranie elementu wyrzutni
+  const ejectionPort = document.getElementById('ejection-port');
   
   // --- Scene & Camera Controls ---
   let sceneTranslateX = 0, sceneTranslateY = 0, sceneScale = 1;
@@ -295,7 +292,7 @@
   let shellEjected = false;
   const loadSound = new Audio('https://actions.google.com/sounds/v1/weapons/gun_cocking.ogg');
   loadSound.volume = 0.5;
-  const casingSound = new Audio('https://actions.google.com/sounds/v1/coins/coin_drop.ogg'); // Przykładowy dźwięk łuski
+  const casingSound = new Audio('https://actions.google.com/sounds/v1/coins/coin_drop.ogg');
   casingSound.volume = 0.3;
 
   function playSound(sound) {
@@ -303,43 +300,40 @@
     sound.play();
   }
 
-  // Funkcja do tworzenia i animowania łuski
-  function ejectCasing(position) {
+  function ejectCasing(startPos) {
     const casing = document.createElement('div');
     casing.classList.add('casing');
     
-    // Pozycja startowa łuski (z wyrzutni)
-    casing.style.left = position.x + 'px';
-    casing.style.top = position.y + 'px';
+    casing.style.left = startPos.x + 'px';
+    casing.style.top = startPos.y + 'px';
     
     scene.appendChild(casing);
-    playSound(casingSound); // Odtworzenie dźwięku łuski
+    playSound(casingSound);
 
-    // Parametry animacji łuski
-    const velocityX = Math.random() * 40 - 20; // Losowa prędkość pozioma
-    const velocityY = -(Math.random() * 30 + 20); // Losowa prędkość pionowa (do góry)
-    const angularVelocity = (Math.random() - 0.5) * 0.3; // Losowa prędkość obrotu
+    const initialVelocityX = (Math.random() * 20 - 10);
+    const initialVelocityY = -(Math.random() * 20 + 25);
+    let velocityX = initialVelocityX;
+    let velocityY = initialVelocityY;
+    const gravity = 1;
+    let rotation = 0;
+    const rotationSpeed = (Math.random() - 0.5) * 40;
+    let currentX = startPos.x;
+    let currentY = startPos.y;
 
     const startTime = performance.now();
-    const animationDuration = 1000; // Czas trwania animacji w ms
+    requestAnimationFrame(function animateCasing() {
+        velocityY += gravity;
+        currentX += velocityX;
+        currentY += velocityY;
+        rotation += rotationSpeed;
 
-    requestAnimationFrame(function animateCasing(currentTime) {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / animationDuration, 1);
+        casing.style.transform = `translate(${currentX - startPos.x}px, ${currentY - startPos.y}px) rotate(${rotation}deg)`;
 
-      const currentX = position.x + (velocityX * progress * 100) + (Math.random() * 10 - 5); // Dodaj trochę losowości
-      const currentY = position.y + (velocityY * progress * 100) + (0.5 * 9.81 * (progress * 100) * (progress * 100)) + (Math.random() * 10 - 5); // Grawitacja + losowość
-      const currentRotation = angularVelocity * progress * 360;
-
-      casing.style.left = currentX + 'px';
-      casing.style.top = currentY + 'px';
-      casing.style.transform = `rotate(${currentRotation}deg)`;
-
-      if (progress < 1) {
-        requestAnimationFrame(animateCasing);
-      } else {
-        casing.remove(); // Usuń łuskę po zakończeniu animacji
-      }
+        if (performance.now() - startTime < 1500) {
+            requestAnimationFrame(animateCasing);
+        } else {
+            casing.remove();
+        }
     });
   }
 
@@ -367,21 +361,26 @@
       return;
     }
     
-    // Wyrzucenie łuski PRZED animacją pocisku
+    // ================== KLUCZOWA ZMIANA TUTAJ ==================
+    // 1. Pobierz pozycję sceny i wyrzutni na ekranie
+    const sceneRect = scene.getBoundingClientRect();
     const ejectionPortRect = ejectionPort.getBoundingClientRect();
-    const gunSlideRect = gunSlide.getBoundingClientRect();
-    const casingStartPosition = {
-        x: ejectionPortRect.left + ejectionPortRect.width / 2,
-        y: ejectionPortRect.top + ejectionPortRect.height / 2
-    };
-    ejectCasing(casingStartPosition);
+    
+    // 2. Przelicz pozycję z ekranu na pozycję wewnątrz sceny
+    //    (pozycja wyrzutni - pozycja sceny) / skala
+    const casingStartX = (ejectionPortRect.left - sceneRect.left) / sceneScale + (ejectionPortRect.width / 2 / sceneScale);
+    const casingStartY = (ejectionPortRect.top - sceneRect.top) / sceneScale + (ejectionPortRect.height / 2 / sceneScale);
+
+    // 3. Wyrzuć łuskę z poprawnych współrzędnych
+    ejectCasing({ x: casingStartX, y: casingStartY });
+    // ==========================================================
 
     ammoCount--;
     updateAmmoIndicator();
     
-    // Animacja pocisku
     const bullet = document.createElement('div');
     bullet.classList.add('bullet');
+    const gunSlideRect = gunSlide.getBoundingClientRect();
     bullet.style.left = (gunSlideRect.right - 10) + 'px'; 
     bullet.style.top = (gunSlideRect.top + (gunSlideRect.height / 2) - 5) + 'px'; 
     document.body.appendChild(bullet);
