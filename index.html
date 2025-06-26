@@ -47,7 +47,7 @@
 
     #gun {
       position: absolute;
-      width: 290px; 
+      width: 290px;
       height: 170px;
       left: 1100px;
       top: 915px;
@@ -76,7 +76,7 @@
       content: '';
       position: absolute;
       width: 50px;
-      height: 22px; 
+      height: 22px;
       top: 12px;
       background-image: repeating-linear-gradient(to right, 
         #3a3e45 0px, #3a3e45 2px, 
@@ -194,9 +194,7 @@
       transform-origin: center;
       z-index: 5;
     }
-    .casing.in-air {
-        pointer-events: none;
-    }
+    .casing.in-air { }
 
     #overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(20, 20, 20, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 25px; z-index: 2000; font-family: 'Arial Black', Gadget, sans-serif; }
     #overlay div:first-child { font-size: 48px; font-weight: bold; color: #61dafb; text-shadow: 0 0 10px #61dafb, 0 0 20px #61dafb; }
@@ -279,9 +277,13 @@
 
   window.addEventListener('keydown', (e) => {
     const moveSpeed = 20;
+    // *** ZMIANA ***
+    // Skrót Ctrl+A teraz zaznacza TYLKO amunicję (elementy z klasą .ammo).
     if (e.ctrlKey && e.key.toLowerCase() === 'a') {
         e.preventDefault();
-        document.querySelectorAll('.interactive-item:not(.selected)').forEach(item => item.classList.add('selected'));
+        document.querySelectorAll('.ammo.interactive-item:not(.selected)').forEach(item => {
+            item.classList.add('selected');
+        });
         return;
     }
     if (['w', 's', 'a', 'd'].includes(e.key.toLowerCase())) {
@@ -313,9 +315,15 @@
     sound.play();
   }
 
+  let dragVelocityTracker = { lastX: 0, lastY: 0, lastTime: 0, vx: 0, vy: 0 };
+  const THROW_VELOCITY_MULTIPLIER = 5;
+
   function applyPhysicsToItem(item, initialVelocityX = 0, initialVelocityY = 0) {
     item.classList.add('in-air');
+    item.classList.add('interactive-item');
     item.classList.remove('selected', 'grabbing');
+    
+    if (item._animationId) cancelAnimationFrame(item._animationId);
 
     const floorY = 1992;
     const ceilingY = 0;
@@ -330,9 +338,8 @@
     let velocityX = initialVelocityX;
     let velocityY = initialVelocityY;
     let rotation = parseFloat(item.style.transform.replace(/[^0-9-.]/g, '')) || 0;
-    let rotationSpeed = (Math.random() - 0.5) * 20;
+    let rotationSpeed = (Math.random() - 0.5) * 20 + (velocityX * 0.5);
 
-    let animationId;
     function animate() {
       velocityY += gravity;
       pos.x += velocityX;
@@ -345,41 +352,32 @@
           velocityX *= friction;
           rotationSpeed *= 0.5;
 
-          if (Math.abs(velocityY) < 1) {
+          if (Math.abs(velocityY) < 1 && Math.abs(velocityX) < 0.1) {
               item.style.top = `${floorY}px`;
               item.style.transform = `rotate(${rotation}deg)`;
               item.classList.remove('in-air');
-              item.classList.add('interactive-item');
-              cancelAnimationFrame(animationId);
+              cancelAnimationFrame(item._animationId);
+              delete item._animationId;
               return;
           }
       }
 
-      if (pos.y <= ceilingY) {
-          pos.y = ceilingY;
-          velocityY *= -bounciness;
-      }
-      if (pos.x >= rightWallX) {
-          pos.x = rightWallX;
-          velocityX *= -bounciness;
-      }
-      if (pos.x <= leftWallX) {
-          pos.x = leftWallX;
-          velocityX *= -bounciness;
-      }
+      if (pos.y <= ceilingY) { pos.y = ceilingY; velocityY *= -bounciness; }
+      if (pos.x >= rightWallX) { pos.x = rightWallX; velocityX *= -bounciness; }
+      if (pos.x <= leftWallX) { pos.x = leftWallX; velocityX *= -bounciness; }
       
       item.style.transform = `rotate(${rotation}deg)`;
       item.style.left = `${pos.x}px`;
       item.style.top = `${pos.y}px`;
 
-      animationId = requestAnimationFrame(animate);
+      item._animationId = requestAnimationFrame(animate);
     }
-    animationId = requestAnimationFrame(animate);
+    item._animationId = requestAnimationFrame(animate);
   }
 
   function ejectCasing(startPos) {
     const casing = document.createElement('div');
-    casing.className = 'casing';
+    casing.className = 'casing interactive-item';
     casing.style.left = startPos.x + 'px';
     casing.style.top = startPos.y + 'px';
     scene.appendChild(casing);
@@ -551,6 +549,12 @@
     if (e.target.classList.contains('interactive-item')) {
       e.stopPropagation();
       const item = e.target;
+      
+      if (item._animationId) {
+        cancelAnimationFrame(item._animationId);
+        delete item._animationId;
+      }
+      
       const isAlreadySelected = item.classList.contains('selected');
       if (!e.ctrlKey && !isAlreadySelected) {
         clearSelection();
@@ -562,6 +566,9 @@
         isDraggingGroup = true;
         groupDragStart.x = e.clientX;
         groupDragStart.y = e.clientY;
+        
+        dragVelocityTracker = { lastX: e.clientX, lastY: e.clientY, lastTime: performance.now(), vx: 0, vy: 0 };
+        
         document.querySelectorAll('.interactive-item.selected').forEach(selectedItem => {
           selectedItem._dragStartX = selectedItem.offsetLeft;
           selectedItem._dragStartY = selectedItem.offsetTop;
@@ -597,6 +604,16 @@
         item.style.left = (item._dragStartX + dx) + 'px';
         item.style.top = (item._dragStartY + dy) + 'px';
       });
+      
+      const now = performance.now();
+      const dt = now - dragVelocityTracker.lastTime;
+      if (dt > 0) {
+        dragVelocityTracker.vx = (e.clientX - dragVelocityTracker.lastX) / dt;
+        dragVelocityTracker.vy = (e.clientY - dragVelocityTracker.lastY) / dt;
+      }
+      dragVelocityTracker.lastX = e.clientX;
+      dragVelocityTracker.lastY = e.clientY;
+      dragVelocityTracker.lastTime = now;
     }
     if (isDraggingMag) {
       let dx = (e.clientX - startMagDragX) / sceneScale;
@@ -635,45 +652,41 @@
     }
   });
 
-  document.addEventListener('mouseup', () => {
+  document.addEventListener('mouseup', (e) => {
     if (isDraggingGroup) {
       isDraggingGroup = false;
-      
       const droppedItems = Array.from(document.querySelectorAll('.interactive-item.selected'));
-      droppedItems.forEach(item => item.classList.remove('grabbing'));
+      let loadedThisDrop = 0;
+      const magRect = magazine.getBoundingClientRect();
 
-      let ammoToLoad = [];
-      
+      const initialVx = dragVelocityTracker.vx * THROW_VELOCITY_MULTIPLIER / sceneScale;
+      const initialVy = dragVelocityTracker.vy * THROW_VELOCITY_MULTIPLIER / sceneScale;
+
       droppedItems.forEach(item => {
-        if (item.classList.contains('casing')) {
-            applyPhysicsToItem(item, (Math.random() - 0.5) * 2, 0);
-        } else if (item.classList.contains('ammo')) {
-            ammoToLoad.push(item);
+        item.classList.remove('grabbing');
+
+        // Logika ładowania AMUNICJI.
+        if (item.classList.contains('ammo')) {
+          const itemRect = item.getBoundingClientRect();
+          // Sprawdzamy kolizję każdego naboju indywidualnie
+          const isOverMag = !(itemRect.right < magRect.left || itemRect.left > magRect.right || itemRect.bottom < magRect.top || itemRect.top > magRect.bottom);
+          
+          if (isOverMag && loadedAmmoCount < maxAmmo) {
+            item.remove();
+            loadedAmmoCount++;
+            loadedThisDrop++;
+          }
+        } 
+        // Logika rzucania/upuszczania ŁUSEK.
+        else if (item.classList.contains('casing')) {
+            applyPhysicsToItem(item, initialVx, initialVy);
         }
       });
       
-      if (ammoToLoad.length > 0) {
-        const magRect = magazine.getBoundingClientRect();
-        const firstAmmoRect = ammoToLoad[0].getBoundingClientRect();
-        const isOverMag = !(firstAmmoRect.right < magRect.left || firstAmmoRect.left > magRect.right || firstAmmoRect.bottom < magRect.top || firstAmmoRect.top > magRect.bottom);
-        
-        if (isOverMag) {
-          let loadedThisDrop = 0;
-          for (const ammo of ammoToLoad) {
-            if (loadedAmmoCount < maxAmmo) {
-              ammo.remove();
-              loadedAmmoCount++;
-              loadedThisDrop++;
-            } else {
-              break;
-            }
-          }
-          if (loadedThisDrop > 0) {
-            updateAmmoIndicator();
-            magazine.style.borderColor = '#ffeb3b';
-            showNotification(`Loaded ${loadedThisDrop} rounds.`);
-          }
-        }
+      if (loadedThisDrop > 0) {
+        updateAmmoIndicator();
+        magazine.style.borderColor = '#ffeb3b';
+        showNotification(`Loaded ${loadedThisDrop} round(s).`);
       }
 
       clearSelection();
@@ -697,6 +710,7 @@
       if (shellEjected) { 
         magazineLoaded = true;
         ammoCount = loadedAmmoCount;
+        updateAmmoIndicator();
         showNotification(`Weapon loaded with ${ammoCount} rounds.`);
       }
       gunSlide.style.transition = 'left 0.1s ease-out'; 
